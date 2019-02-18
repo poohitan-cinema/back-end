@@ -2,6 +2,7 @@ const HTTPStatus = require('http-status-codes');
 
 const DB = require('../services/db');
 const getStaticContentURL = require('../helpers/get-static-content-url');
+const parseJWT = require('../helpers/parse-jwt');
 
 const options = {
   schema: {
@@ -20,8 +21,10 @@ const options = {
   },
 };
 
-const router = async (server) => {
-  server.get('/', options, async (request, reply) => {
+const router = async (fastify) => {
+  fastify.addHook('preHandler', async request => parseJWT(request));
+
+  fastify.get('/', options, async (request, reply) => {
     const { include, ...query } = request.query;
 
     const serials = await DB('serials')
@@ -30,13 +33,13 @@ const router = async (server) => {
     reply.send(serials);
   });
 
-  server.get('/:id', async (request, reply) => {
+  fastify.get('/:id', async (request, reply) => {
     const [serial] = await DB('serials').where({ id: request.params.id });
 
     reply.send(serial);
   });
 
-  server.post('/', options, async (request, reply) => {
+  fastify.post('/', options, async (request, reply) => {
     const { icon, cover, ...rest } = request.body;
 
     await DB('serials')
@@ -51,7 +54,7 @@ const router = async (server) => {
     reply.send({ id });
   });
 
-  server.patch('/:id', options, async (request, reply) => {
+  fastify.patch('/:id', options, async (request, reply) => {
     const { icon, cover, ...rest } = request.body;
 
     await DB('serials')
@@ -65,7 +68,7 @@ const router = async (server) => {
     reply.send(HTTPStatus.OK);
   });
 
-  server.delete('/:id', async (request, reply) => {
+  fastify.delete('/:id', async (request, reply) => {
     await DB('serials')
       .where({ id: request.params.id })
       .delete();
@@ -73,7 +76,7 @@ const router = async (server) => {
     reply.send(HTTPStatus.OK);
   });
 
-  server.delete('/', options, async (request, reply) => {
+  fastify.delete('/', options, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {

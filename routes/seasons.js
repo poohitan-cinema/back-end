@@ -2,6 +2,7 @@ const HTTPStatus = require('http-status-codes');
 
 const DB = require('../services/db');
 const getStaticContentURL = require('../helpers/get-static-content-url');
+const parseJWT = require('../helpers/parse-jwt');
 
 const options = {
   schema: {
@@ -19,8 +20,10 @@ const options = {
   },
 };
 
-const router = async (server) => {
-  server.get('/', options, async (request, reply) => {
+const router = async (fastify) => {
+  fastify.addHook('preHandler', async request => parseJWT(request));
+
+  fastify.get('/', options, async (request, reply) => {
     const seasons = await DB('seasons')
       .where(request.query)
       .orderBy('number', 'asc');
@@ -28,7 +31,7 @@ const router = async (server) => {
     reply.send(seasons);
   });
 
-  server.get('/:id', async (request, reply) => {
+  fastify.get('/:id', async (request, reply) => {
     const [season] = await DB
       .select('se.*', 's.title as serial_title', 's.slug as serial_slug', 's.icon as serial_icon', 's.id as serial_id')
       .from('seasons as se')
@@ -38,7 +41,7 @@ const router = async (server) => {
     reply.send(season);
   });
 
-  server.post('/', options, async (request, reply) => {
+  fastify.post('/', options, async (request, reply) => {
     const { cover, ...rest } = request.body;
 
     await DB('seasons')
@@ -52,7 +55,7 @@ const router = async (server) => {
     reply.send({ id });
   });
 
-  server.patch('/:id', options, async (request, reply) => {
+  fastify.patch('/:id', options, async (request, reply) => {
     const { cover, ...rest } = request.body;
 
     await DB('seasons')
@@ -65,7 +68,7 @@ const router = async (server) => {
     reply.send(HTTPStatus.OK);
   });
 
-  server.delete('/:id', async (request, reply) => {
+  fastify.delete('/:id', async (request, reply) => {
     await DB('seasons')
       .where({ id: request.params.id })
       .delete();
@@ -73,7 +76,7 @@ const router = async (server) => {
     reply.send(HTTPStatus.OK);
   });
 
-  server.delete('/', options, async (request, reply) => {
+  fastify.delete('/', options, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {

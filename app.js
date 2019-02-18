@@ -1,7 +1,13 @@
-const fastify = require('fastify');
+const fastify = require('fastify')({
+  logger: {
+    prettyPrint: true,
+    level: 'error',
+  },
+});
 const HTTPStatus = require('http-status-codes');
-const cors = require('fastify-cors');
 
+const login = require('./routes/login');
+const users = require('./routes/users');
 const movies = require('./routes/movies');
 const serials = require('./routes/serials');
 const seasons = require('./routes/seasons');
@@ -11,32 +17,35 @@ const staticContent = require('./routes/static');
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
 const config = require('./config');
 
-const server = fastify({ logger: true });
+fastify.register(require('fastify-cors'), { origin: config.corsWhiteList, credentials: true });
+fastify.register(require('fastify-cookie'), (error) => {
+  if (error) throw error;
+});
 
-server.addHook('preHandler', async (request) => {
+fastify.addHook('preHandler', async (request) => {
   request.body = transformColumnNamesCase(request.body, 'snake');
   request.query = transformColumnNamesCase(request.query, 'snake');
 });
 
-server.register(cors, { origin: config.corsWhiteList, credentials: true });
+fastify.register(login, { prefix: '/login' });
+fastify.register(users, { prefix: '/users' });
+fastify.register(movies, { prefix: '/movies' });
+fastify.register(serials, { prefix: '/serials' });
+fastify.register(seasons, { prefix: '/seasons' });
+fastify.register(episodes, { prefix: '/episodes' });
+fastify.register(staticContent, { prefix: '/static' });
 
-server.register(movies, { prefix: '/movies' });
-server.register(serials, { prefix: '/serials' });
-server.register(seasons, { prefix: '/seasons' });
-server.register(episodes, { prefix: '/episodes' });
-server.register(staticContent, { prefix: '/static' });
-
-server.get('/', async (request, reply) => {
+fastify.get('/', async (request, reply) => {
   reply.send(HTTPStatus.OK);
 });
 
-server.listen(config.port, (error, address) => {
+fastify.listen(config.port, (error, address) => {
   if (error) {
-    server.log.error(error);
+    fastify.log.error(error);
     process.exit(1);
 
     return;
   }
 
-  server.log.info(`Server listening on ${address}`);
+  fastify.log.info(`Server listening on ${address}`);
 });

@@ -18,11 +18,18 @@ const config = {
     db: knexfile.development,
     baseURL: `http://localhost:${shared.port}`,
     corsWhiteList: ['http://localhost:7300'],
+
+    jwtSecret: 'jwtsecret',
+    superSecret: 'supersecret',
   },
   production: {
     db: knexfile.production,
     baseURL: 'https://cinema.poohitan.com',
+
     corsWhiteList: [''],
+
+    jwtSecret: process.env.POOHITAN_COM_JWT_SECRET,
+    superSecret: process.env.POOHITAN_COM_SUPERSECRET,
   },
 };
 
