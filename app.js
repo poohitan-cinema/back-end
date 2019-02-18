@@ -2,6 +2,7 @@ const fastify = require('fastify');
 const HTTPStatus = require('http-status-codes');
 const cors = require('fastify-cors');
 
+const movies = require('./routes/movies');
 const serials = require('./routes/serials');
 const seasons = require('./routes/seasons');
 const episodes = require('./routes/episodes');
@@ -19,6 +20,7 @@ server.addHook('preHandler', async (request) => {
 
 server.register(cors, { origin: config.corsWhiteList, credentials: true });
 
+server.register(movies, { prefix: '/movies' });
 server.register(serials, { prefix: '/serials' });
 server.register(seasons, { prefix: '/seasons' });
 server.register(episodes, { prefix: '/episodes' });
