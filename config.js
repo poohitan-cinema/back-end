@@ -24,12 +24,22 @@ const config = {
   },
   production: {
     db: knexfile.production,
-    baseURL: 'https://cinema.poohitan.com',
+    baseURL: 'https://api.cinema.poohitan.com',
 
     corsWhiteList: [''],
 
     jwtSecret: process.env.POOHITAN_COM_JWT_SECRET,
     superSecret: process.env.POOHITAN_COM_SUPERSECRET,
+
+    server: {
+      host: '46.101.99.203',
+      username: 'poohitan',
+      folder: '~/poohitan.com/cinema/back-end',
+    },
+
+    repository: 'git@github.com:poohitan-cinema/back-end.git',
+
+    appName: 'cinema-api',
   },
 };
 
