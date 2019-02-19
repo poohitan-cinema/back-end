@@ -21,7 +21,7 @@ module.exports = {
   production: {
     client: 'sqlite3',
     connection: {
-      filename: '../cinema.sqlite3',
+      filename: '~/poohitan.com/cinema/back-end/cinema.sqlite3',
     },
     useNullAsDefault: true,
     postProcessResponse,
