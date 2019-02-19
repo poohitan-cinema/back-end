@@ -32,7 +32,7 @@ const router = async (server) => {
 
     const token = jwt.sign({ id: user.id }, config.jwtSecret);
 
-    reply.send({ token });
+    reply.setCookie('token', token).send({ token });
   });
 };
 
