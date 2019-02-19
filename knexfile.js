@@ -1,3 +1,4 @@
+const path = require('path');
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
 
 function postProcessResponse(result) {
@@ -8,11 +9,13 @@ function postProcessResponse(result) {
   return transformColumnNamesCase(result, 'camel');
 }
 
+const pathToDB = path.resolve(__dirname, '../cinema.sqlite3');
+
 module.exports = {
   development: {
     client: 'sqlite3',
     connection: {
-      filename: './cinema.sqlite3',
+      filename: pathToDB,
     },
     useNullAsDefault: true,
     postProcessResponse,
@@ -21,7 +24,7 @@ module.exports = {
   production: {
     client: 'sqlite3',
     connection: {
-      filename: '~/poohitan.com/cinema/back-end/cinema.sqlite3',
+      filename: pathToDB,
     },
     useNullAsDefault: true,
     postProcessResponse,
