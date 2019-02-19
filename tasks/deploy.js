@@ -1,8 +1,10 @@
 const execSSH = require('exec-ssh');
 const fs = require('fs');
+const { argv } = require('yargs');
 const { server, repository, appName } = require('../config');
 
 const { host, username, folder } = server;
+const branch = argv.branch || argv.b || 'master';
 
 const privateKey = fs.readFileSync('/Users/poohitan/.ssh/id_rsa');
 
@@ -16,7 +18,7 @@ const envVariables = {
 
 const envVariablesString = Object.keys(envVariables).map(envVariableName => `export ${envVariableName}=${envVariables[envVariableName]}`).join(' && ');
 
-exec(`git clone -b master ${repository} ${folder}/new`)
+exec(`git clone -b ${branch} ${repository} ${folder}/new`)
   .then(() => exec(`npm install --prefix ${folder}/new`))
   .then(() => exec(`rm -rf ${folder}/current`))
   .then(() => exec(`mv ${folder}/new ${folder}/current`))
