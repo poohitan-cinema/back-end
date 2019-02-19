@@ -24,9 +24,9 @@ const config = {
   },
   production: {
     db: knexfile.production,
-    baseURL: 'https://api.cinema.poohitan.com',
+    baseURL: 'http://api.cinema.poohitan.com',
 
-    corsWhiteList: [''],
+    corsWhiteList: ['http://cinema.poohitan.com', 'https://cinema.poohitan.com'],
 
     jwtSecret: process.env.POOHITAN_COM_JWT_SECRET,
     superSecret: process.env.POOHITAN_COM_SUPERSECRET,
