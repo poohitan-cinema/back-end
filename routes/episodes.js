@@ -2,7 +2,7 @@ const HTTPStatus = require('http-status-codes');
 
 const DB = require('../services/db');
 const getStaticContentURL = require('../helpers/get-static-content-url');
-const parseJWT = require('../helpers/parse-jwt');
+const Auth = require('../services/authentication');
 
 const options = {
   schema: {
@@ -21,9 +21,7 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.addHook('preHandler', async request => parseJWT(request));
-
-  fastify.get('/', options, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
     const { include, ...query } = request.query;
 
     const episodes = await DB('episodes')
@@ -33,13 +31,13 @@ const router = async (fastify) => {
     reply.send(episodes);
   });
 
-  fastify.get('/:id', async (request, reply) => {
+  fastify.get('/:id', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
     const [episode] = await DB('episodes').where({ id: request.params.id });
 
     reply.send(episode);
   });
 
-  fastify.post('/', options, async (request, reply) => {
+  fastify.post('/', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
     const { url, ...rest } = request.body;
 
     await DB('episodes')
@@ -53,7 +51,7 @@ const router = async (fastify) => {
     reply.send({ id });
   });
 
-  fastify.patch('/:id', options, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
     const { url, ...rest } = request.body;
 
     await DB('episodes')
@@ -66,7 +64,7 @@ const router = async (fastify) => {
     reply.send(HTTPStatus.OK);
   });
 
-  fastify.delete('/:id', async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.validateSuperSecret }, async (request, reply) => {
     await DB('episodes')
       .where({ id: request.params.id })
       .delete();
@@ -74,7 +72,7 @@ const router = async (fastify) => {
     reply.send(HTTPStatus.OK);
   });
 
-  fastify.delete('/', options, async (request, reply) => {
+  fastify.delete('/', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {

@@ -1,7 +1,6 @@
 const fastify = require('fastify')({
   logger: {
     prettyPrint: true,
-    level: 'error',
   },
 });
 const HTTPStatus = require('http-status-codes');
@@ -12,7 +11,6 @@ const movies = require('./routes/movies');
 const serials = require('./routes/serials');
 const seasons = require('./routes/seasons');
 const episodes = require('./routes/episodes');
-const staticContent = require('./routes/static');
 
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
 const config = require('./config');
@@ -33,7 +31,6 @@ fastify.register(movies, { prefix: '/movies' });
 fastify.register(serials, { prefix: '/serials' });
 fastify.register(seasons, { prefix: '/seasons' });
 fastify.register(episodes, { prefix: '/episodes' });
-fastify.register(staticContent, { prefix: '/static' });
 
 fastify.get('/', async (request, reply) => {
   reply.send(HTTPStatus.OK);

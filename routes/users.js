@@ -1,7 +1,7 @@
 const HTTPStatus = require('http-status-codes');
 
 const DB = require('../services/db');
-const config = require('../config');
+const Auth = require('../services/authentication');
 
 const options = {
   schema: {
@@ -15,13 +15,7 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.addHook('preHandler', async (request) => {
-    const { secret } = request.query;
-
-    if (!secret || secret !== config.superSecret) {
-      throw new Error('Неправильний суперпароль.');
-    }
-  });
+  fastify.addHook('preHandler', Auth.validateSuperSecret);
 
   fastify.get('/', options, async (request, reply) => {
     const users = await DB('users');

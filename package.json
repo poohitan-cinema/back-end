@@ -12,17 +12,17 @@
   "license": "ISC",
   "dependencies": {
     "case": "^1.6.1",
-    "fastify": "^1.14.1",
+    "exec-ssh": "git+https://github.com/poohitan-blog/exec-ssh.git",
+    "fastify": "^2.0.0-rc.6",
     "fastify-cookie": "^2.1.7",
-    "fastify-cors": "^1.0.0",
-    "fastify-plugin": "^1.5.0",
+    "fastify-cors": "^2.1.1",
     "http-status-codes": "^1.3.0",
     "jsonwebtoken": "^8.4.0",
     "knex": "^0.16.3",
     "nookies": "^2.0.1",
+    "pino-pretty": "^2.5.0",
     "sqlite3": "^4.0.6",
-    "yargs": "^13.2.1",
-    "exec-ssh": "git+https://github.com/poohitan-blog/exec-ssh.git"
+    "yargs": "^13.2.1"
   },
   "devDependencies": {
     "babel-eslint": "^10.0.1",
