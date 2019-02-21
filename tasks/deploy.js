@@ -1,8 +1,9 @@
 const execSSH = require('exec-ssh');
 const fs = require('fs');
 const { argv } = require('yargs');
-const { server, repository, appName } = require('../config');
+const { server, repository, deploy } = require('../config');
 
+const { appName } = deploy;
 const { host, username, folder } = server;
 const branch = argv.branch || argv.b || 'master';
 

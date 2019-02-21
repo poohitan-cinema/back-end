@@ -16,7 +16,6 @@ const shared = {
 const config = {
   development: {
     db: knexfile.development,
-    baseURL: `http://localhost:${shared.port}`,
     corsWhiteList: ['http://localhost:7300'],
 
     jwtSecret: 'jwtsecret',
@@ -24,8 +23,6 @@ const config = {
   },
   production: {
     db: knexfile.production,
-    baseURL: 'http://api.cinema.poohitan.com',
-
     corsWhiteList: ['http://cinema.poohitan.com', 'https://cinema.poohitan.com'],
 
     jwtSecret: process.env.POOHITAN_COM_JWT_SECRET,
@@ -39,7 +36,9 @@ const config = {
 
     repository: 'git@github.com:poohitan-cinema/back-end.git',
 
-    appName: 'cinema-api',
+    deploy: {
+      appName: 'cinema-api',
+    },
   },
 };
 
