@@ -31,6 +31,27 @@ const router = async (fastify) => {
     reply.send(episodes);
   });
 
+  fastify.get('/detailed', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+    const { number, season_number: seasonNumber, serial_slug: serialSlug } = request.query;
+
+    const [serial] = await DB('serials').where({ slug: serialSlug });
+    const [season] = await DB('seasons').where({ number: seasonNumber, serial_id: serial.id });
+    const episodes = await DB('episodes')
+      .whereIn('number', [number - 1, number, number + 1])
+      .andWhere({ season_id: season.id })
+      .orderBy('number', 'asc');
+
+    const [previousEpisode, currentEpisode, nextEpisode] = episodes;
+
+    reply.send({
+      ...currentEpisode,
+      nextEpisode,
+      previousEpisode,
+      season,
+      serial,
+    });
+  });
+
   fastify.get('/:id', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
     const [episode] = await DB('episodes').where({ id: request.params.id });
 

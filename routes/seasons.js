@@ -29,12 +29,18 @@ const router = async (fastify) => {
     reply.send(seasons);
   });
 
+  fastify.get('/detailed', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+    const { number, serial_slug: serialSlug } = request.query;
+
+    const [serial] = await DB('serials').where({ slug: serialSlug });
+    const [season] = await DB('seasons').where({ number, serial_id: serial.id });
+    const episodes = await DB('episodes').where({ season_id: season.id });
+
+    reply.send({ ...season, serial, episodes });
+  });
+
   fastify.get('/:id', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
-    const [season] = await DB
-      .select('se.*', 's.title as serial_title', 's.slug as serial_slug', 's.icon as serial_icon', 's.id as serial_id')
-      .from('seasons as se')
-      .where({ 'se.id': request.params.id })
-      .join('serials as s', { 's.id': 'se.serial_id' });
+    const [season] = await DB('seasons').where({ id: request.params.id });
 
     reply.send(season);
   });

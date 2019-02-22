@@ -23,12 +23,22 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
-    const { include, ...query } = request.query;
-
     const serials = await DB('serials')
-      .where(query);
+      .where(request.query);
 
     reply.send(serials);
+  });
+
+  fastify.get('/detailed', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+    const { slug } = request.query;
+
+    const [serial] = await DB('serials').where({ slug });
+    const seasons = await DB('seasons').where({ serial_id: serial.id });
+
+    reply.send({
+      ...serial,
+      seasons,
+    });
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
