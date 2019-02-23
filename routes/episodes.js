@@ -1,8 +1,9 @@
 const HTTPStatus = require('http-status-codes');
 
 const DB = require('../services/db');
-const getStaticContentURL = require('../helpers/get-static-content-url');
 const Auth = require('../services/authentication');
+const getStaticContentURL = require('../helpers/get-static-content-url');
+const random = require('../helpers/random');
 
 const options = {
   schema: {
@@ -22,10 +23,8 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
-    const { include, ...query } = request.query;
-
     const episodes = await DB('episodes')
-      .where(query)
+      .where(request.query)
       .orderBy('number', 'asc');
 
     reply.send(episodes);
@@ -49,6 +48,31 @@ const router = async (fastify) => {
       ...currentEpisode,
       nextEpisode,
       previousEpisode,
+      season,
+      serial,
+    });
+  });
+
+  fastify.get('/random', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+    const episodes = await DB
+      .select('*')
+      .where(request.query)
+      .from(function () {
+        this
+          .column(['e.*', 's.serial_id'])
+          .select()
+          .from('episodes as e')
+          .innerJoin('seasons as s', 'e.season_id', 's.id');
+      });
+
+    const randomIndex = random({ min: 0, max: episodes.length - 1, integer: true });
+    const randomEpisode = episodes[randomIndex];
+
+    const [season] = await DB('seasons').where({ id: randomEpisode.seasonId });
+    const [serial] = await DB('serials').where({ id: season.serialId });
+
+    reply.send({
+      ...randomEpisode,
       season,
       serial,
     });
