@@ -32,9 +32,13 @@ const router = async (fastify) => {
   fastify.get('/detailed', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
     const { number, serial_slug: serialSlug } = request.query;
 
-    const [serial] = await DB('serials').where({ slug: serialSlug });
-    const [season] = await DB('seasons').where({ number, serial_id: serial.id });
-    const episodes = await DB('episodes').where({ season_id: season.id });
+    const [serial] = await DB('serials')
+      .where({ slug: serialSlug });
+    const [season] = await DB('seasons')
+      .where({ number, serial_id: serial.id });
+    const episodes = await DB('episodes')
+      .where({ season_id: season.id })
+      .orderBy('number', 'asc');
 
     reply.send({ ...season, serial, episodes });
   });
