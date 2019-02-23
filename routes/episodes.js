@@ -37,11 +37,13 @@ const router = async (fastify) => {
     const [serial] = await DB('serials').where({ slug: serialSlug });
     const [season] = await DB('seasons').where({ number: seasonNumber, serial_id: serial.id });
     const episodes = await DB('episodes')
-      .whereIn('number', [number - 1, number, number + 1])
+      .whereBetween('number', [number - 1, number + 1])
       .andWhere({ season_id: season.id })
       .orderBy('number', 'asc');
 
-    const [previousEpisode, currentEpisode, nextEpisode] = episodes;
+    const currentEpisode = episodes.find(episode => episode.number === number);
+    const previousEpisode = episodes.find(episode => episode.number === number - 1);
+    const nextEpisode = episodes.find(episode => episode.number === number + 1);
 
     reply.send({
       ...currentEpisode,
