@@ -33,7 +33,9 @@ const router = async (fastify) => {
     const { slug } = request.query;
 
     const [serial] = await DB('serials').where({ slug });
-    const seasons = await DB('seasons').where({ serial_id: serial.id });
+    const seasons = await DB('seasons')
+      .where({ serial_id: serial.id })
+      .orderBy('number', 'asc');
 
     reply.send({
       ...serial,
