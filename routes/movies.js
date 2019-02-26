@@ -3,7 +3,7 @@ const HTTPStatus = require('http-status-codes');
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
 const getStaticContentURL = require('../helpers/get-static-content-url');
-const random = require('../helpers/random');
+const Random = require('../services/random');
 
 const options = {
   schema: {
@@ -35,7 +35,7 @@ const router = async (fastify) => {
   fastify.get('/random', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
     const movies = await DB('movies').where(request.query);
 
-    const randomIndex = random({ min: 0, max: movies.length });
+    const randomIndex = Random.number({ min: 0, max: movies.length });
     const randomMovie = movies[randomIndex];
 
     reply.send(randomMovie);

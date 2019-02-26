@@ -3,7 +3,7 @@ const HTTPStatus = require('http-status-codes');
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
 const getStaticContentURL = require('../helpers/get-static-content-url');
-const random = require('../helpers/random');
+const Random = require('../services/random');
 
 const options = {
   schema: {
@@ -54,22 +54,35 @@ const router = async (fastify) => {
   });
 
   fastify.get('/random', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
-    const episodes = await DB
-      .select('*')
-      .where(request.query)
-      .from(function () {
-        this
-          .column(['e.*', 's.serial_id'])
-          .select()
-          .from('episodes as e')
-          .innerJoin('seasons as s', 'e.season_id', 's.id');
-      });
+    const { serial_id: serialId } = request.query;
 
-    const randomIndex = random({ min: 0, max: episodes.length - 1, integer: true });
-    const randomEpisode = episodes[randomIndex];
+    let serial;
+
+    if (serialId) {
+      [serial] = await DB('serials').where({ id: serialId });
+    } else {
+      // Select serials which have episodes
+      const serials = await DB
+        .select('s.*')
+        .from('episodes as e')
+        .leftJoin('seasons as se', 'e.season_id', 'se.id')
+        .leftJoin('serials as s', 's.id', 'se.serial_id')
+        .distinct('s.id');
+
+      // Choose a random one
+      serial = Random.arrayElement(serials);
+    }
+
+    // Select all episodes of the desired serial
+    const episodes = await DB
+      .select('episodes.*')
+      .from('episodes')
+      .innerJoin('seasons', 'episodes.season_id', 'seasons.id')
+      .where({ 'seasons.serial_id': serial.id });
+
+    const randomEpisode = Random.arrayElement(episodes);
 
     const [season] = await DB('seasons').where({ id: randomEpisode.seasonId });
-    const [serial] = await DB('serials').where({ id: season.serialId });
 
     reply.send({
       ...randomEpisode,
