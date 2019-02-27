@@ -101,6 +101,39 @@ const router = async (fastify) => {
 
     reply.send(HTTPStatus.OK);
   });
+
+  fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+    const { season: seasonNumber, urls } = request.body;
+
+    const [serial] = await DB('serials')
+      .where({ id: request.params.id });
+
+    const [season] = await DB('seasons').where({ serial_id: serial.id, number: seasonNumber });
+
+    await Promise.all(
+      Object.keys(urls).map(async (episodeNumber) => {
+        const url = urls[episodeNumber];
+        const number = Number(episodeNumber);
+        const [episode] = await DB('episodes')
+          .where({ season_id: season.id, number });
+
+        if (episode) {
+          return DB('episodes')
+            .update({ url })
+            .where({ id: episode.id });
+        }
+
+        return DB('episodes')
+          .insert({
+            url,
+            number,
+            season_id: season.id,
+          });
+      }),
+    );
+
+    reply.send(HTTPStatus.OK);
+  });
 };
 
 module.exports = router;

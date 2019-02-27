@@ -78,7 +78,8 @@ const router = async (fastify) => {
       .select('episodes.*')
       .from('episodes')
       .innerJoin('seasons', 'episodes.season_id', 'seasons.id')
-      .where({ 'seasons.serial_id': serial.id });
+      .whereNotNull('episodes.url')
+      .andWhere({ 'seasons.serial_id': serial.id });
 
     const randomEpisode = Random.arrayElement(episodes);
 
