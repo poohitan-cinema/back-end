@@ -1,4 +1,3 @@
-
 exports.up = knex => knex.schema.createTable('seasons', (table) => {
   table.increments('id');
   table.integer('number').unsigned().notNullable();

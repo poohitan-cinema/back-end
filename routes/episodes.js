@@ -1,4 +1,5 @@
 const HTTPStatus = require('http-status-codes');
+const htmlToText = require('html-to-text');
 
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
@@ -25,7 +26,7 @@ const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const episodes = await DB('episodes')
       .where(request.query)
-      .orderBy('number', 'asc');
+      .orderByRaw('CAST(number AS INT)');
 
     reply.send(episodes);
   });
@@ -38,7 +39,7 @@ const router = async (fastify) => {
     const episodes = await DB('episodes')
       .whereBetween('number', [number - 1, number + 1])
       .andWhere({ season_id: season.id })
-      .orderBy('number', 'asc');
+      .orderByRaw('CAST(number AS INT)');
 
     const currentEpisode = episodes.find(episode => episode.number === number);
     const previousEpisode = episodes.find(episode => episode.number === number - 1);
@@ -113,12 +114,21 @@ const router = async (fastify) => {
   });
 
   fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
-    const { url, ...rest } = request.body;
+    const {
+      url, title, description, ...rest
+    } = request.body;
+
+    const sanitizedTitle = title ? htmlToText.fromString(title, { wordwrap: false }) : undefined;
+    const sanitizedDescription = description
+      ? htmlToText.fromString(description, { wordwrap: false })
+      : undefined;
 
     await DB('episodes')
       .update({
-        ...rest,
+        title: sanitizedTitle,
+        description: sanitizedDescription,
         url: getStaticContentURL(url),
+        ...rest,
       })
       .where({ id: request.params.id });
 

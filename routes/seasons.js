@@ -38,7 +38,7 @@ const router = async (fastify) => {
       .where({ number, serial_id: serial.id });
     const episodes = await DB('episodes')
       .where({ season_id: season.id })
-      .orderBy('number', 'asc');
+      .orderByRaw('CAST(number AS INT)');
 
     reply.send({ ...season, serial, episodes });
   });

@@ -1,4 +1,3 @@
-
 exports.up = knex => knex.schema.createTable('serials', (table) => {
   table.increments('id');
   table.string('slug').unique().index().notNullable();

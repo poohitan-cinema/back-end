@@ -1,4 +1,3 @@
-
 exports.up = knex => knex.schema.table('episodes', (table) => {
   table.string('description');
 });

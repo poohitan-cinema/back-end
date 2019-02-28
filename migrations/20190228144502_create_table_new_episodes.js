@@ -1,7 +1,8 @@
-exports.up = knex => knex.schema.createTable('episodes', (table) => {
+exports.up = knex => knex.schema.createTable('new_episodes', (table) => {
   table.increments('id');
-  table.integer('number').unsigned().notNullable();
+  table.string('number').notNullable();
   table.text('title');
+  table.text('description');
   table.text('url');
   table.timestamps(false, true);
 
@@ -9,4 +10,4 @@ exports.up = knex => knex.schema.createTable('episodes', (table) => {
   table.foreign('season_id').references('id').inTable('seasons');
 });
 
-exports.down = knex => knex.schema.dropTableIfExists('episodes');
+exports.down = knex => knex.schema.dropTableIfExists('new_episodes');
