@@ -9,13 +9,14 @@ const Random = require('../services/random');
 const options = {
   schema: {
     querystring: {
-      number: { type: 'number' },
+      number: { type: 'string' },
       title: { type: 'string' },
     },
     body: {
       properties: {
-        number: { type: 'number' },
+        number: { type: 'string' },
         title: { type: 'string' },
+        description: { type: 'string' },
         url: { type: 'string' },
       },
     },
@@ -36,14 +37,12 @@ const router = async (fastify) => {
 
     const [serial] = await DB('serials').where({ slug: serialSlug });
     const [season] = await DB('seasons').where({ number: seasonNumber, serial_id: serial.id });
-    const episodes = await DB('episodes')
-      .whereBetween('number', [number - 1, number + 1])
-      .andWhere({ season_id: season.id })
-      .orderByRaw('CAST(number AS INT)');
+    const episodes = await DB('episodes').where({ season_id: season.id }).orderByRaw('CAST(number AS INT)');
 
     const currentEpisode = episodes.find(episode => episode.number === number);
-    const previousEpisode = episodes.find(episode => episode.number === number - 1);
-    const nextEpisode = episodes.find(episode => episode.number === number + 1);
+    const indexOfCurrentEpisode = episodes.indexOf(currentEpisode);
+    const previousEpisode = episodes[indexOfCurrentEpisode - 1];
+    const nextEpisode = episodes[indexOfCurrentEpisode + 1];
 
     reply.send({
       ...currentEpisode,
