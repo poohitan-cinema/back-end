@@ -16,44 +16,6 @@ if (!serialSlugOrId) {
   return;
 }
 
-function fixTitleCase(title) {
-  const exceptions = [
-    'і', 'й', 'та', 'у', 'в', 'о', 'об', 'або', 'не', 'а', 'як', 'яка', 'який', 'якого', 'яке', 'які', 'яку', 'що', 'на',
-    'біля', 'про', 'без', 'від', 'для', 'по', 'через', 'при', 'над', 'під', 'до', 'з', 'із', 'як', 'за', 'але',
-    'би', 'б', 'хоча', 'це', 'його', 'її', 'мій', 'моя', 'мої', 'моє', 'їх', 'наші', 'ваші',
-  ];
-  const romanNumeralsRegex = /^[IXVCMLDІХМ]+$/i;
-
-  const fixedTitle = title
-    .split(' ')
-    .map((word, index, array) => {
-      const isFirstWord = index === 0;
-      const isLastWord = index === array.length - 1;
-
-      if (exceptions.includes(word.toLowerCase()) && !isFirstWord && !isLastWord) {
-        return word.toLowerCase();
-      }
-
-      if (romanNumeralsRegex.test(word)) {
-        return word.toUpperCase();
-      }
-
-      const [firstLetter, ...rest] = word;
-
-      return [
-        firstLetter.toUpperCase(),
-        rest.join('').toLowerCase(),
-      ].join('');
-    })
-    .join(' ');
-
-  if (title !== fixedTitle) {
-    console.log(`Fixed episode title from "${title}" to "${fixedTitle}"`);
-  }
-
-  return fixedTitle;
-}
-
 function fillSerialWithData(serial, data) {
   return Promise.all(
     data.map(async ({ season: seasonNumber, episodes }) => {
@@ -76,7 +38,7 @@ function fillSerialWithData(serial, data) {
 
             return DB('episodes')
               .insert({
-                title: fixTitleCase(title),
+                title,
                 description,
                 number,
                 season_id: season.id,
@@ -86,7 +48,7 @@ function fillSerialWithData(serial, data) {
           console.log(`Updating episode ${number} in season ${seasonNumber}...`);
 
           return DB('episodes')
-            .update({ title: fixTitleCase(title), description })
+            .update({ title, description })
             .where({ season_id: season.id, number });
         }),
       );
