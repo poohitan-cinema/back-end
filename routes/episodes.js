@@ -22,7 +22,7 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.get('/', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const episodes = await DB('episodes')
       .where(request.query)
       .orderBy('number', 'asc');
@@ -30,7 +30,7 @@ const router = async (fastify) => {
     reply.send(episodes);
   });
 
-  fastify.get('/detailed', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const { number, season_number: seasonNumber, serial_slug: serialSlug } = request.query;
 
     const [serial] = await DB('serials').where({ slug: serialSlug });
@@ -53,7 +53,7 @@ const router = async (fastify) => {
     });
   });
 
-  fastify.get('/random', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+  fastify.get('/random', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const { serial_id: serialId } = request.query;
 
     let serial;
@@ -92,13 +92,13 @@ const router = async (fastify) => {
     });
   });
 
-  fastify.get('/:id', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+  fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const [episode] = await DB('episodes').where({ id: request.params.id });
 
     reply.send(episode);
   });
 
-  fastify.post('/', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { url, ...rest } = request.body;
 
     await DB('episodes')
@@ -112,7 +112,7 @@ const router = async (fastify) => {
     reply.send({ id });
   });
 
-  fastify.patch('/:id', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { url, ...rest } = request.body;
 
     await DB('episodes')
@@ -125,7 +125,7 @@ const router = async (fastify) => {
     reply.send(HTTPStatus.OK);
   });
 
-  fastify.delete('/:id', { preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
     await DB('episodes')
       .where({ id: request.params.id })
       .delete();
@@ -133,7 +133,7 @@ const router = async (fastify) => {
     reply.send(HTTPStatus.OK);
   });
 
-  fastify.delete('/', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {

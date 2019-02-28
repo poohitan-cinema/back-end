@@ -19,14 +19,12 @@ const config = {
     corsWhiteList: ['http://localhost:7300'],
 
     jwtSecret: 'jwtsecret',
-    superSecret: 'supersecret',
   },
   production: {
     db: knexfile.production,
     corsWhiteList: ['http://cinema.poohitan.com', 'https://cinema.poohitan.com'],
 
     jwtSecret: process.env.POOHITAN_COM_JWT_SECRET,
-    superSecret: process.env.POOHITAN_COM_SUPERSECRET,
 
     server: {
       host: '46.101.99.203',

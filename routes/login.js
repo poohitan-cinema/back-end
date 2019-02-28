@@ -4,8 +4,6 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const DB = require('../services/db');
 
-const DEFAULT_USER_NAME = 'kinslon';
-
 const options = {
   schema: {
     body: {
@@ -18,7 +16,7 @@ const options = {
 
 const router = async (server) => {
   server.post('/', options, async (request, reply) => {
-    const { name = DEFAULT_USER_NAME, password } = request.body;
+    const { name, password } = request.body;
 
     const [user] = await DB('users')
       .where({ name })
@@ -31,8 +29,16 @@ const router = async (server) => {
     }
 
     const token = jwt.sign({ id: user.id }, config.jwtSecret);
+    const { id, role } = user;
+    const safeUser = { id, name, role };
 
-    reply.setCookie('token', token).send({ token });
+    reply
+      .setCookie('token', token)
+      .setCookie('user', JSON.stringify(safeUser))
+      .send({
+        user: safeUser,
+        token,
+      });
   });
 };
 

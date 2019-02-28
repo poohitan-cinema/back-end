@@ -25,14 +25,14 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.get('/', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const movies = await DB('movies')
       .where(request.query);
 
     reply.send(movies);
   });
 
-  fastify.get('/random', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+  fastify.get('/random', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const movies = await DB('movies').where(request.query);
 
     const randomIndex = Random.number({ min: 0, max: movies.length });
@@ -41,13 +41,13 @@ const router = async (fastify) => {
     reply.send(randomMovie);
   });
 
-  fastify.get('/:id', { ...options, preHandler: Auth.validateJWT }, async (request, reply) => {
+  fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const [movie] = await DB('movies').where({ id: request.params.id });
 
     reply.send(movie);
   });
 
-  fastify.post('/', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const {
       icon, cover, url, ...rest
     } = request.body;
@@ -65,7 +65,7 @@ const router = async (fastify) => {
     reply.send({ id });
   });
 
-  fastify.patch('/:id', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const {
       icon, cover, url, ...rest
     } = request.body;
@@ -82,7 +82,7 @@ const router = async (fastify) => {
     reply.send(HTTPStatus.OK);
   });
 
-  fastify.delete('/:id', { preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
     await DB('movies')
       .where({ id: request.params.id })
       .delete();
@@ -90,7 +90,7 @@ const router = async (fastify) => {
     reply.send(HTTPStatus.OK);
   });
 
-  fastify.delete('/', { ...options, preHandler: Auth.validateSuperSecret }, async (request, reply) => {
+  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {

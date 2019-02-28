@@ -15,7 +15,7 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.addHook('preHandler', Auth.validateSuperSecret);
+  fastify.addHook('preHandler', Auth.checkAdminRights);
 
   fastify.get('/', options, async (request, reply) => {
     const users = await DB('users');

@@ -1,42 +1,49 @@
 const HttpStatus = require('http-status-codes');
 const jwt = require('jsonwebtoken');
+const util = require('util');
 
 const config = require('../config');
+const DB = require('./db');
 
-function validateJWT(request, reply, next) {
+const verifyToken = util.promisify(jwt.verify);
+
+async function checkUserRights(request, reply, next) {
   const { token } = request.cookies;
 
-  if (!token) {
-    reply.code(HttpStatus.UNAUTHORIZED);
-
-    return next(new Error('Немає токену авторизації'));
-  }
+  console.log('checking user rights', token);
 
   try {
-    jwt.verify(token, config.jwtSecret);
+    await verifyToken(token, config.jwtSecret);
 
     return next();
   } catch (error) {
     reply.code(HttpStatus.UNAUTHORIZED);
 
-    return next(new Error('Токен авторизації невалідний'));
+    console.log(error);
+
+    return next(new Error('Ці дані доступні лише зареєстрованим користувачам'));
   }
 }
 
-function validateSuperSecret(request, reply, next) {
-  const { secret } = request.query;
+async function checkAdminRights(request, reply, next) {
+  const { token } = request.cookies;
 
-  if (!secret) {
+  try {
+    await verifyToken(token, config.jwtSecret);
+
+    const { id } = jwt.decode(token);
+    const [user] = await DB('users').where({ id });
+
+    if (user.role === 'admin') {
+      return next();
+    }
+
+    throw new Error();
+  } catch (error) {
     reply.code(HttpStatus.UNAUTHORIZED);
 
-    return next(new Error('Немає суперпаролю'));
+    return next(new Error('Ці дані доступні лише адміністратору'));
   }
-
-  if (secret === config.superSecret) {
-    return next();
-  }
-
-  return next(new Error('Неправильний суперпароль'));
 }
 
-module.exports = { validateJWT, validateSuperSecret };
+module.exports = { checkUserRights, checkAdminRights };
