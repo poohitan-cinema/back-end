@@ -10,8 +10,6 @@ const verifyToken = util.promisify(jwt.verify);
 async function checkUserRights(request, reply, next) {
   const { token } = request.cookies;
 
-  console.log('checking user rights', token);
-
   try {
     await verifyToken(token, config.jwtSecret);
 
@@ -21,7 +19,7 @@ async function checkUserRights(request, reply, next) {
 
     console.log(error);
 
-    return next(new Error('Ці дані доступні лише зареєстрованим користувачам'));
+    return next(new Error('Операція доступна лише зареєстрованим користувачам'));
   }
 }
 
@@ -42,7 +40,7 @@ async function checkAdminRights(request, reply, next) {
   } catch (error) {
     reply.code(HttpStatus.UNAUTHORIZED);
 
-    return next(new Error('Ці дані доступні лише адміністратору'));
+    return next(new Error('Операція доступна лише адміністраторам'));
   }
 }
 
