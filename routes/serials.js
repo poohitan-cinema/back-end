@@ -103,8 +103,7 @@ const router = async (fastify) => {
   });
 
   fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
-    const { season: seasonNumber, urls: rawUrls } = request.body;
-    const urls = rawUrls.map(getStaticContentURL);
+    const { season: seasonNumber, urls } = request.body;
 
     const [serial] = await DB('serials')
       .where({ id: request.params.id });
@@ -113,8 +112,10 @@ const router = async (fastify) => {
 
     await Promise.all(
       Object.keys(urls).map(async (episodeNumber) => {
-        const url = urls[episodeNumber];
+        const rawUrl = urls[episodeNumber];
+        const url = getStaticContentURL(rawUrl);
         const number = Number(episodeNumber);
+
         const [episode] = await DB('episodes')
           .where({ season_id: season.id, number });
 
