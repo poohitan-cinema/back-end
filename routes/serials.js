@@ -1,8 +1,8 @@
 const HTTPStatus = require('http-status-codes');
 
 const DB = require('../services/db');
-const getStaticContentURL = require('../helpers/get-static-content-url');
 const Auth = require('../services/authentication');
+const getStaticContentURL = require('../helpers/get-static-content-url');
 
 const options = {
   schema: {
@@ -103,7 +103,8 @@ const router = async (fastify) => {
   });
 
   fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
-    const { season: seasonNumber, urls } = request.body;
+    const { season: seasonNumber, urls: rawUrls } = request.body;
+    const urls = rawUrls.map(getStaticContentURL);
 
     const [serial] = await DB('serials')
       .where({ id: request.params.id });
@@ -117,18 +118,28 @@ const router = async (fastify) => {
         const [episode] = await DB('episodes')
           .where({ season_id: season.id, number });
 
-        if (episode) {
-          return DB('episodes')
-            .update({ url })
-            .where({ id: episode.id });
+        if (!episode.videoId) {
+          return DB('videos')
+            .insert({ url })
+            .then(() => DB('videos').where({ url }))
+            .then(([video]) => {
+              if (episode) {
+                return DB('episodes').update({
+                  video_id: video.id,
+                });
+              }
+
+              return DB('episodes').insert({
+                number,
+                season_id: season.id,
+                video_id: video.id,
+              });
+            });
         }
 
-        return DB('episodes')
-          .insert({
-            url,
-            number,
-            season_id: season.id,
-          });
+        return DB('videos')
+          .update({ url })
+          .where({ id: episode.videoId });
       }),
     );
 

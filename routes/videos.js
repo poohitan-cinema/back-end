@@ -1,20 +1,14 @@
 const HTTPStatus = require('http-status-codes');
 
 const DB = require('../services/db');
-const getStaticContentURL = require('../helpers/get-static-content-url');
 const Auth = require('../services/authentication');
+const getStaticContentURL = require('../helpers/get-static-content-url');
 
 const options = {
   schema: {
-    querystring: {
-      number: { type: 'number' },
-      serial: { type: 'number' },
-    },
     body: {
       properties: {
-        number: { type: 'number' },
-        cover: { type: 'string' },
-        serial: { type: 'number' },
+        url: { type: 'string' },
       },
     },
   },
@@ -22,43 +16,25 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const seasons = await DB('seasons')
-      .where(request.query)
-      .orderBy('number', 'asc');
+    const videos = await DB('videos')
+      .where(request.query);
 
-    reply.send(seasons);
-  });
-
-  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const { number, serial_slug: serialSlug } = request.query;
-
-    const [serial] = await DB('serials')
-      .where({ slug: serialSlug });
-    const [season] = await DB('seasons')
-      .where({ number, serial_id: serial.id });
-    const episodes = await DB
-      .select('e.title', 'e.number', 'v.url')
-      .from('episodes as e')
-      .where({ season_id: season.id })
-      .innerJoin('videos as v', 'e.video_id', 'v.id')
-      .orderByRaw('CAST(e.number AS INT)');
-
-    reply.send({ ...season, serial, episodes });
+    reply.send(videos);
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const [season] = await DB('seasons').where({ id: request.params.id });
+    const [video] = await DB('videos').where({ id: request.params.id });
 
-    reply.send(season);
+    reply.send(video);
   });
 
   fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
-    const { cover, ...rest } = request.body;
+    const { url, ...rest } = request.body;
 
-    await DB('seasons')
+    await DB('videos')
       .insert({
+        url: getStaticContentURL(url),
         ...rest,
-        cover: getStaticContentURL(cover),
       });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
@@ -67,12 +43,12 @@ const router = async (fastify) => {
   });
 
   fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
-    const { cover, ...rest } = request.body;
+    const { url, ...rest } = request.body;
 
-    await DB('seasons')
+    await DB('videos')
       .update({
+        url: getStaticContentURL(url),
         ...rest,
-        cover: getStaticContentURL(cover),
       })
       .where({ id: request.params.id });
 
@@ -80,7 +56,7 @@ const router = async (fastify) => {
   });
 
   fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
-    await DB('seasons')
+    await DB('videos')
       .where({ id: request.params.id })
       .delete();
 
@@ -96,7 +72,7 @@ const router = async (fastify) => {
       return;
     }
 
-    await DB('seasons')
+    await DB('videos')
       .where(query)
       .delete();
 

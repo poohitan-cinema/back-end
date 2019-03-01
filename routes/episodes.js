@@ -3,8 +3,8 @@ const htmlToText = require('html-to-text');
 
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
-const getStaticContentURL = require('../helpers/get-static-content-url');
 const Random = require('../services/random');
+const getStaticContentURL = require('../helpers/get-static-content-url');
 
 const options = {
   schema: {
@@ -25,8 +25,11 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const episodes = await DB('episodes')
+    const episodes = await DB
+      .select('e.*', 'v.url')
+      .from('episodes as e')
       .where(request.query)
+      .innerJoin('videos as v', 'e.video_id', 'v.id')
       .orderByRaw('CAST(number AS INT)');
 
     reply.send(episodes);
@@ -37,7 +40,13 @@ const router = async (fastify) => {
 
     const [serial] = await DB('serials').where({ slug: serialSlug });
     const [season] = await DB('seasons').where({ number: seasonNumber, serial_id: serial.id });
-    const episodes = await DB('episodes').where({ season_id: season.id }).orderByRaw('CAST(number AS INT)');
+
+    const episodes = await DB
+      .select('e.*', 'v.url')
+      .from('episodes as e')
+      .where({ season_id: season.id })
+      .innerJoin('videos as v', 'e.video_id', 'v.id')
+      .orderByRaw('CAST(number AS INT)');
 
     const currentEpisode = episodes.find(episode => episode.number === number);
     const indexOfCurrentEpisode = episodes.indexOf(currentEpisode);
@@ -75,13 +84,13 @@ const router = async (fastify) => {
 
     // Select all episodes of the desired serial
     const episodes = await DB
-      .select('episodes.*')
-      .from('episodes')
-      .innerJoin('seasons', 'episodes.season_id', 'seasons.id')
-      .whereNotNull('episodes.url')
-      .andWhere({ 'seasons.serial_id': serial.id });
+      .select('e.*', 'v.url')
+      .from('episodes as e')
+      .innerJoin('seasons as s', 'e.season_id', 's.id')
+      .innerJoin('videos as v', 'e.video_id', 'v.id')
+      .andWhere({ 's.serial_id': serial.id });
 
-    const randomEpisode = Random.arrayElement(episodes);
+    const randomEpisode = Random.arrayElement(episodes.filter(episode => episode.url));
 
     const [season] = await DB('seasons').where({ id: randomEpisode.seasonId });
 
@@ -100,11 +109,20 @@ const router = async (fastify) => {
 
   fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { url, ...rest } = request.body;
+    let videoId;
+
+    if (url) {
+      await DB('videos').insert({
+        url: getStaticContentURL(url),
+      });
+
+      [{ id: videoId }] = await DB.raw('SELECT last_insert_rowid() as "id"');
+    }
 
     await DB('episodes')
       .insert({
+        video_id: videoId,
         ...rest,
-        url: getStaticContentURL(url),
       });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
@@ -114,7 +132,7 @@ const router = async (fastify) => {
 
   fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const {
-      url, title, description, ...rest
+      title, description, ...rest
     } = request.body;
 
     const sanitizedTitle = title ? htmlToText.fromString(title, { wordwrap: false }) : undefined;
@@ -126,7 +144,6 @@ const router = async (fastify) => {
       .update({
         title: sanitizedTitle,
         description: sanitizedDescription,
-        url: getStaticContentURL(url),
         ...rest,
       })
       .where({ id: request.params.id });

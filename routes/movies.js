@@ -18,7 +18,6 @@ const options = {
         description: { type: 'string' },
         icon: { type: 'string' },
         cover: { type: 'string' },
-        url: { type: 'string' },
       },
     },
   },
@@ -26,23 +25,33 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const movies = await DB('movies')
+    const movies = await DB
+      .select('m.*', 'v.url')
+      .from('movies as m')
+      .innerJoin('videos as v', 'm.video_id', 'v.id')
       .where(request.query);
 
     reply.send(movies);
   });
 
   fastify.get('/random', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const movies = await DB('movies').where(request.query);
+    const movies = await DB
+      .select('m.*', 'v.url')
+      .from('movies as m')
+      .innerJoin('videos as v', 'm.video_id', 'v.id')
+      .where(request.query);
 
-    const randomIndex = Random.number({ min: 0, max: movies.length });
-    const randomMovie = movies[randomIndex];
+    const randomMovie = Random.arrayElement(movies);
 
     reply.send(randomMovie);
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const [movie] = await DB('movies').where({ id: request.params.id });
+    const [movie] = await DB
+      .select('m.*', 'v.url')
+      .from('movies as m')
+      .innerJoin('videos as v', 'm.video_id', 'v.id')
+      .where({ id: request.params.id });
 
     reply.send(movie);
   });
@@ -52,12 +61,22 @@ const router = async (fastify) => {
       icon, cover, url, ...rest
     } = request.body;
 
+    let videoId;
+
+    if (url) {
+      await DB('videos').insert({
+        url: getStaticContentURL(url),
+      });
+
+      [{ id: videoId }] = await DB.raw('SELECT last_insert_rowid() as "id"');
+    }
+
     await DB('movies')
       .insert({
         ...rest,
         icon: getStaticContentURL(icon),
         cover: getStaticContentURL(cover),
-        url: getStaticContentURL(url),
+        video_id: videoId,
       });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
@@ -67,7 +86,7 @@ const router = async (fastify) => {
 
   fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const {
-      icon, cover, url, ...rest
+      icon, cover, ...rest
     } = request.body;
 
     await DB('movies')
@@ -75,7 +94,6 @@ const router = async (fastify) => {
         ...rest,
         icon: getStaticContentURL(icon),
         cover: getStaticContentURL(cover),
-        url: getStaticContentURL(url),
       })
       .where({ id: request.params.id });
 
