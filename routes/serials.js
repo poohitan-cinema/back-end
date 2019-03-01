@@ -120,14 +120,13 @@ const router = async (fastify) => {
           .where({ season_id: season.id, number });
 
         if (!episode.videoId) {
-          return DB('videos')
-            .insert({ url })
+          return DB('videos').insert({ url })
             .then(() => DB('videos').where({ url }))
             .then(([video]) => {
               if (episode) {
-                return DB('episodes').update({
-                  video_id: video.id,
-                });
+                return DB('episodes')
+                  .update({ video_id: video.id })
+                  .where({ id: episode.id });
               }
 
               return DB('episodes').insert({
