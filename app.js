@@ -5,9 +5,10 @@ const fastify = require('fastify')({
 });
 const HTTPStatus = require('http-status-codes');
 
-const signIn = require('./routes/login');
+const login = require('./routes/login');
 const users = require('./routes/users');
 const videos = require('./routes/videos');
+const videoViews = require('./routes/video-views');
 const movies = require('./routes/movies');
 const serials = require('./routes/serials');
 const seasons = require('./routes/seasons');
@@ -26,9 +27,10 @@ fastify.addHook('preHandler', async (request) => {
   request.query = transformColumnNamesCase(request.query, 'snake');
 });
 
-fastify.register(signIn, { prefix: '/sign-in' });
+fastify.register(login, { prefix: '/login' });
 fastify.register(users, { prefix: '/users' });
 fastify.register(videos, { prefix: '/videos' });
+fastify.register(videoViews, { prefix: '/video-views' });
 fastify.register(movies, { prefix: '/movies' });
 fastify.register(serials, { prefix: '/serials' });
 fastify.register(seasons, { prefix: '/seasons' });
