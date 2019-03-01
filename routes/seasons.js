@@ -8,13 +8,13 @@ const options = {
   schema: {
     querystring: {
       number: { type: 'number' },
-      serial: { type: 'number' },
+      serialId: { type: 'number' },
     },
     body: {
       properties: {
         number: { type: 'number' },
         cover: { type: 'string' },
-        serial: { type: 'number' },
+        serialId: { type: 'number' },
       },
     },
   },

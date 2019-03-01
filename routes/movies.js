@@ -10,6 +10,7 @@ const options = {
     querystring: {
       slug: { type: 'string' },
       title: { type: 'string' },
+      videoId: { type: 'number' },
     },
     body: {
       properties: {
@@ -18,6 +19,7 @@ const options = {
         description: { type: 'string' },
         icon: { type: 'string' },
         cover: { type: 'string' },
+        videoId: { type: 'number' },
       },
     },
   },
