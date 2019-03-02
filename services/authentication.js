@@ -7,39 +7,48 @@ const DB = require('./db');
 
 const verifyToken = util.promisify(jwt.verify);
 
-async function checkUserRights(request, reply) {
+async function injectCurrentUser(request) {
   const token = request.cookies.token || request.query.token;
 
-  try {
-    await verifyToken(token, config.jwtSecret);
-  } catch (error) {
-    reply.code(HttpStatus.UNAUTHORIZED);
-
-    console.log(error);
-
-    throw new Error('Операція доступна лише зареєстрованим користувачам');
+  if (!token) {
+    return;
   }
+
+  await verifyToken(token, config.jwtSecret);
+
+  const { id } = jwt.decode(token);
+  const [user] = await DB
+    .select('users.id', 'users.name', 'users.role')
+    .from('users')
+    .where({ id })
+    .limit(1);
+
+  request.currentUser = user;
+  request.token = token;
+}
+
+async function checkUserRights(request, reply) {
+  const isAuthenticated = request.currentUser && request.currentUser.id;
+
+  if (isAuthenticated) {
+    return true;
+  }
+
+  reply.code(HttpStatus.UNAUTHORIZED);
+
+  throw new Error('Операція доступна лише зареєстрованим користувачам');
 }
 
 async function checkAdminRights(request, reply) {
-  const token = request.cookies.token || request.query.token;
+  const isAdmin = request.currentUser && request.currentUser.role === 'admin';
 
-  try {
-    await verifyToken(token, config.jwtSecret);
-
-    const { id } = jwt.decode(token);
-    const [user] = await DB('users').where({ id });
-
-    if (user.role !== 'admin') {
-      throw new Error();
-    }
-  } catch (error) {
-    reply.code(HttpStatus.UNAUTHORIZED);
-
-    console.log(error);
-
-    throw new Error('Операція доступна лише адміністраторам');
+  if (isAdmin) {
+    return true;
   }
+
+  reply.code(HttpStatus.UNAUTHORIZED);
+
+  throw new Error('Операція доступна лише адміністраторам');
 }
 
-module.exports = { checkUserRights, checkAdminRights };
+module.exports = { injectCurrentUser, checkUserRights, checkAdminRights };

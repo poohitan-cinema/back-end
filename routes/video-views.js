@@ -52,7 +52,7 @@ async function getMoviesViewsDetailed({ where, limit }) {
 }
 
 const router = async (fastify) => {
-  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const videoViews = await DB('video_views').where(request.query);
 
     return videoViews;
@@ -60,13 +60,23 @@ const router = async (fastify) => {
 
   fastify.get('/episodes', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { limit, ...query } = request.query;
-    const episodesViews = await getEpisodesViewsDetailed({ where: query, limit });
+    const { id } = request.currentUser;
+
+    const episodesViews = await getEpisodesViewsDetailed({
+      where: { user_id: id, ...query },
+      limit,
+    });
 
     return episodesViews;
   });
 
   fastify.get('/episodes/last', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
-    const [lastEpisodeView] = await getEpisodesViewsDetailed({ where: request.query, limit: 1 });
+    const { id } = request.currentUser;
+
+    const [lastEpisodeView] = await getEpisodesViewsDetailed({
+      where: { user_id: id, ...request.query },
+      limit: 1,
+    });
 
     if (!lastEpisodeView) {
       return null;

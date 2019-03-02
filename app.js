@@ -5,6 +5,8 @@ const fastify = require('fastify')({
 });
 const HTTPStatus = require('http-status-codes');
 
+const Auth = require('./services/authentication');
+
 const login = require('./routes/login');
 const users = require('./routes/users');
 const videos = require('./routes/videos');
@@ -28,6 +30,8 @@ fastify.addHook('preHandler', async (request) => {
   }
   request.query = transformColumnNamesCase(request.query, 'snake');
 });
+
+fastify.addHook('preHandler', async request => Auth.injectCurrentUser(request));
 
 fastify.register(login, { prefix: '/login' });
 fastify.register(users, { prefix: '/users' });
