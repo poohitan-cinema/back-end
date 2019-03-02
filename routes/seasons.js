@@ -37,7 +37,7 @@ const router = async (fastify) => {
     const [season] = await DB('seasons')
       .where({ number, serial_id: serial.id });
     const episodes = await DB
-      .select('e.title', 'e.number', 'v.url')
+      .select('e.id', 'e.title', 'e.number', 'v.url')
       .from('episodes as e')
       .where({ season_id: season.id })
       .innerJoin('videos as v', 'e.video_id', 'v.id')

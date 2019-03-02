@@ -7,24 +7,22 @@ const DB = require('./db');
 
 const verifyToken = util.promisify(jwt.verify);
 
-async function checkUserRights(request, reply, next) {
-  const { token } = request.cookies;
+async function checkUserRights(request, reply) {
+  const token = request.cookies.token || request.query.token;
 
   try {
     await verifyToken(token, config.jwtSecret);
-
-    return next();
   } catch (error) {
     reply.code(HttpStatus.UNAUTHORIZED);
 
     console.log(error);
 
-    return next(new Error('Операція доступна лише зареєстрованим користувачам'));
+    throw new Error('Операція доступна лише зареєстрованим користувачам');
   }
 }
 
-async function checkAdminRights(request, reply, next) {
-  const { token } = request.cookies;
+async function checkAdminRights(request, reply) {
+  const token = request.cookies.token || request.query.token;
 
   try {
     await verifyToken(token, config.jwtSecret);
@@ -32,15 +30,15 @@ async function checkAdminRights(request, reply, next) {
     const { id } = jwt.decode(token);
     const [user] = await DB('users').where({ id });
 
-    if (user.role === 'admin') {
-      return next();
+    if (user.role !== 'admin') {
+      throw new Error();
     }
-
-    throw new Error();
   } catch (error) {
     reply.code(HttpStatus.UNAUTHORIZED);
 
-    return next(new Error('Операція доступна лише адміністраторам'));
+    console.log(error);
+
+    throw new Error('Операція доступна лише адміністраторам');
   }
 }
 

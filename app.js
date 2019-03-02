@@ -23,7 +23,9 @@ fastify.register(require('fastify-cookie'), (error) => {
 });
 
 fastify.addHook('preHandler', async (request) => {
-  request.body = transformColumnNamesCase(request.body, 'snake');
+  if (request.headers['content-type'] === 'application/json') {
+    request.body = transformColumnNamesCase(request.body, 'snake');
+  }
   request.query = transformColumnNamesCase(request.query, 'snake');
 });
 
