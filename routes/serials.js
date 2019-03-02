@@ -22,14 +22,14 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const serials = await DB('serials')
       .where(request.query);
 
-    reply.send(serials);
+    return serials;
   });
 
-  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { slug } = request.query;
 
     const [serial] = await DB('serials').where({ slug });
@@ -37,19 +37,25 @@ const router = async (fastify) => {
       .where({ serial_id: serial.id })
       .orderBy('number', 'asc');
 
-    reply.send({
+    return {
       ...serial,
       seasons,
-    });
+    };
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const [serial] = await DB('serials').where({ id: request.params.id });
 
-    reply.send(serial);
+    if (!serial) {
+      reply.code(HTTPStatus.NOT_FOUND);
+
+      return {};
+    }
+
+    return serial;
   });
 
-  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { icon, cover, ...rest } = request.body;
 
     await DB('serials')
@@ -60,11 +66,13 @@ const router = async (fastify) => {
       });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
+    const [createdSerial] = await DB('serials').where({ id });
 
-    reply.send({ id });
+    return createdSerial;
   });
 
-  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
     const { icon, cover, ...rest } = request.body;
 
     await DB('serials')
@@ -73,33 +81,38 @@ const router = async (fastify) => {
         icon: getStaticContentURL(icon),
         cover: getStaticContentURL(cover),
       })
-      .where({ id: request.params.id });
+      .where({ id });
 
-    reply.send(HTTPStatus.OK);
+    const [updatedSerial] = await DB('serials').where({ id });
+
+    return updatedSerial;
   });
 
-  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
+    const [deletedSerial] = await DB('serials').where({ id });
+
     await DB('serials')
-      .where({ id: request.params.id })
+      .where({ id })
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedSerial;
   });
 
-  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { force, ...query } = request.query;
 
     if (!force) {
-      reply.send('You must provide "force=true" queryparam to ensure this operation.');
-
-      return;
+      return new Error('You must provide "force=true" queryparam to ensure this operation.');
     }
+
+    const deletedSerials = await DB('serials').where(query);
 
     await DB('serials')
       .where(query)
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedSerials;
   });
 
   fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
@@ -143,7 +156,9 @@ const router = async (fastify) => {
       }),
     );
 
-    reply.send(HTTPStatus.OK);
+    reply.code(HTTPStatus.OK);
+
+    return {};
   });
 };
 

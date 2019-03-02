@@ -21,15 +21,15 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const seasons = await DB('seasons')
       .where(request.query)
       .orderBy('number', 'asc');
 
-    reply.send(seasons);
+    return seasons;
   });
 
-  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { number, serial_slug: serialSlug } = request.query;
 
     const [serial] = await DB('serials')
@@ -43,16 +43,22 @@ const router = async (fastify) => {
       .innerJoin('videos as v', 'e.video_id', 'v.id')
       .orderByRaw('CAST(e.number AS INT)');
 
-    reply.send({ ...season, serial, episodes });
+    return { ...season, serial, episodes };
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const [season] = await DB('seasons').where({ id: request.params.id });
 
-    reply.send(season);
+    if (!season) {
+      reply.code(HTTPStatus.NOT_FOUND);
+
+      return {};
+    }
+
+    return season;
   });
 
-  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { cover, ...rest } = request.body;
 
     await DB('seasons')
@@ -62,11 +68,13 @@ const router = async (fastify) => {
       });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
+    const [createdSeason] = await DB('seasons').where({ id });
 
-    reply.send({ id });
+    return createdSeason;
   });
 
-  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
     const { cover, ...rest } = request.body;
 
     await DB('seasons')
@@ -74,33 +82,38 @@ const router = async (fastify) => {
         ...rest,
         cover: getStaticContentURL(cover),
       })
-      .where({ id: request.params.id });
+      .where({ id });
 
-    reply.send(HTTPStatus.OK);
+    const [updatedSeason] = await DB('seasons').where({ id });
+
+    return updatedSeason;
   });
 
-  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
+    const [deletedSeason] = await DB('seasons').where({ id });
+
     await DB('seasons')
-      .where({ id: request.params.id })
+      .where({ id })
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedSeason;
   });
 
-  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { force, ...query } = request.query;
 
     if (!force) {
-      reply.send('You must provide "force=true" queryparam to ensure this operation.');
-
-      return;
+      return new Error('You must provide "force=true" queryparam to ensure this operation.');
     }
+
+    const deletedSeasons = await DB('seasons').where(query);
 
     await DB('seasons')
       .where(query)
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedSeasons;
   });
 };
 

@@ -23,9 +23,9 @@ const router = async (server) => {
       .limit(1);
 
     if (user.password !== password) {
-      reply.send(HTTPStatus.UNAUTHORIZED);
+      reply.code(HTTPStatus.UNAUTHORIZED);
 
-      return;
+      return {};
     }
 
     const token = jwt.sign({ id: user.id }, config.jwtSecret);
@@ -34,11 +34,12 @@ const router = async (server) => {
 
     reply
       .setCookie('token', token)
-      .setCookie('user', JSON.stringify(safeUser))
-      .send({
-        user: safeUser,
-        token,
-      });
+      .setCookie('user', JSON.stringify(safeUser));
+
+    return {
+      user: safeUser,
+      token,
+    };
   });
 };
 

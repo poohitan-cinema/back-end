@@ -27,7 +27,7 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const episodes = await DB
       .select('e.*', 'v.url')
       .from('episodes as e')
@@ -35,10 +35,10 @@ const router = async (fastify) => {
       .innerJoin('videos as v', 'e.video_id', 'v.id')
       .orderByRaw('CAST(number AS INT)');
 
-    reply.send(episodes);
+    return episodes;
   });
 
-  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { number, season_number: seasonNumber, serial_slug: serialSlug } = request.query;
 
     const [serial] = await DB('serials').where({ slug: serialSlug });
@@ -56,16 +56,16 @@ const router = async (fastify) => {
     const previousEpisode = episodes[indexOfCurrentEpisode - 1];
     const nextEpisode = episodes[indexOfCurrentEpisode + 1];
 
-    reply.send({
+    return {
       ...currentEpisode,
       nextEpisode,
       previousEpisode,
       season,
       serial,
-    });
+    };
   });
 
-  fastify.get('/random', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/random', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { serial_id: serialId } = request.query;
 
     let serial;
@@ -97,20 +97,26 @@ const router = async (fastify) => {
 
     const [season] = await DB('seasons').where({ id: randomEpisode.seasonId });
 
-    reply.send({
+    return {
       ...randomEpisode,
       season,
       serial,
-    });
+    };
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const [episode] = await DB('episodes').where({ id: request.params.id });
 
-    reply.send(episode);
+    if (!episode) {
+      reply.code(HTTPStatus.NOT_FOUND);
+
+      return {};
+    }
+
+    return episode;
   });
 
-  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { url, ...rest } = request.body;
     let videoId;
 
@@ -129,11 +135,17 @@ const router = async (fastify) => {
       });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
+    const [createdEpisode] = await DB
+      .select('e.*', 'v.url')
+      .from('episodes as e')
+      .innerJoin('videos as v', 'e.video_id', 'v.id')
+      .where({ id });
 
-    reply.send({ id });
+    return createdEpisode;
   });
 
-  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
     const {
       title, description, ...rest
     } = request.body;
@@ -149,33 +161,44 @@ const router = async (fastify) => {
         description: sanitizedDescription,
         ...rest,
       })
-      .where({ id: request.params.id });
+      .where({ id });
 
-    reply.send(HTTPStatus.OK);
+    const [updatedEpisode] = await DB
+      .select('e.*', 'v.url')
+      .from('episodes as e')
+      .innerJoin('videos as v', 'e.video_id', 'v.id')
+      .where({ 'e.id': id });
+
+    return updatedEpisode;
   });
 
-  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
+    const [deletedEpisode] = await DB('episodes').where({ id });
+
     await DB('episodes')
-      .where({ id: request.params.id })
+      .where({ id })
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedEpisode;
   });
 
   fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {
-      reply.send('You must provide "force=true" queryparam to ensure this operation.');
+      reply.code(HTTPStatus.FORBIDDEN);
 
-      return;
+      return new Error('You must provide "force=true" queryparam to ensure this operation.');
     }
+
+    const deletedEpisodes = await DB('episodes').where(query);
 
     await DB('episodes')
       .where(query)
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedEpisodes;
   });
 };
 

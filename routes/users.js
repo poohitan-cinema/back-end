@@ -17,41 +17,55 @@ const options = {
 const router = async (fastify) => {
   fastify.addHook('preHandler', Auth.checkAdminRights);
 
-  fastify.get('/', options, async (request, reply) => {
+  fastify.get('/', options, async () => {
     const users = await DB('users');
 
-    reply.send(users);
+    return users;
   });
 
   fastify.get('/:id', async (request, reply) => {
     const [user] = await DB('users').where({ id: request.params.id });
 
-    reply.send(user);
+    if (!user) {
+      reply.code(HTTPStatus.NOT_FOUND);
+
+      return {};
+    }
+
+    return user;
   });
 
-  fastify.post('/', options, async (request, reply) => {
+  fastify.post('/', options, async (request) => {
     await DB('users')
       .insert(request.body);
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
+    const [createdUser] = await DB('users').where({ id });
 
-    reply.send({ id });
+    return createdUser;
   });
 
-  fastify.patch('/:id', options, async (request, reply) => {
+  fastify.patch('/:id', options, async (request) => {
+    const { id } = request.params;
+
     await DB('users')
       .update(request.body)
-      .where({ id: request.params.id });
+      .where({ id: request.params });
 
-    reply.send(HTTPStatus.OK);
+    const [updatedUser] = await DB('users').where({ id });
+
+    return updatedUser;
   });
 
-  fastify.delete('/:id', async (request, reply) => {
+  fastify.delete('/:id', async (request) => {
+    const { id } = request.params;
+    const [deletedUser] = await DB('users').where({ id });
+
     await DB('users')
       .where({ id: request.params.id })
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedUser;
   });
 };
 

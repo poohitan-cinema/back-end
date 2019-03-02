@@ -26,14 +26,14 @@ const options = {
 };
 
 const router = async (fastify) => {
-  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const movies = await DB
       .select('m.*', 'v.url')
       .from('movies as m')
       .innerJoin('videos as v', 'm.video_id', 'v.id')
       .where(request.query);
 
-    reply.send(movies);
+    return movies;
   });
 
   fastify.get('/random', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
@@ -43,9 +43,13 @@ const router = async (fastify) => {
       .innerJoin('videos as v', 'm.video_id', 'v.id')
       .where(request.query);
 
-    const randomMovie = Random.arrayElement(movies);
+    if (!movies.length) {
+      reply.code(HTTPStatus.NOT_FOUND);
 
-    reply.send(randomMovie);
+      return {};
+    }
+
+    return Random.arrayElement(movies.filter(movie => movie.url));
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
@@ -55,10 +59,16 @@ const router = async (fastify) => {
       .innerJoin('videos as v', 'm.video_id', 'v.id')
       .where({ id: request.params.id });
 
-    reply.send(movie);
+    if (!movie) {
+      reply.code(HTTPStatus.NOT_FOUND);
+
+      return {};
+    }
+
+    return movie;
   });
 
-  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const {
       icon, cover, url, ...rest
     } = request.body;
@@ -82,11 +92,17 @@ const router = async (fastify) => {
       });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
+    const [createdMovie] = await DB
+      .select('m.*', 'v.url')
+      .from('movies as m')
+      .innerJoin('videos as v', 'm.video_id', 'v.id')
+      .where({ id });
 
-    reply.send({ id });
+    return createdMovie;
   });
 
-  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
     const {
       icon, cover, ...rest
     } = request.body;
@@ -97,33 +113,44 @@ const router = async (fastify) => {
         icon: getStaticContentURL(icon),
         cover: getStaticContentURL(cover),
       })
-      .where({ id: request.params.id });
+      .where({ id });
 
-    reply.send(HTTPStatus.OK);
+    const [updatedMovie] = await DB
+      .select('m.*', 'v.url')
+      .from('movies as m')
+      .innerJoin('videos as v', 'm.video_id', 'v.id')
+      .where({ id });
+
+    return updatedMovie;
   });
 
-  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
+    const { id } = request.params;
+    const [deletedMovie] = await DB('movies').where({ id });
+
     await DB('movies')
-      .where({ id: request.params.id })
+      .where({ id })
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedMovie;
   });
 
   fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {
-      reply.send('You must provide "force=true" queryparam to ensure this operation.');
+      reply.code(HTTPStatus.FORBIDDEN);
 
-      return;
+      return new Error('You must provide "force=true" queryparam to ensure this operation.');
     }
+
+    const deletedMovies = await DB('movies').where(query);
 
     await DB('movies')
       .where(query)
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return deletedMovies;
   });
 };
 
