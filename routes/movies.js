@@ -46,7 +46,7 @@ const router = async (fastify) => {
     if (!movies.length) {
       reply.code(HTTPStatus.NOT_FOUND);
 
-      return {};
+      throw new Error();
     }
 
     return Random.arrayElement(movies.filter(movie => movie.url));
@@ -62,7 +62,7 @@ const router = async (fastify) => {
     if (!movie) {
       reply.code(HTTPStatus.NOT_FOUND);
 
-      return {};
+      throw new Error();
     }
 
     return movie;
@@ -141,7 +141,7 @@ const router = async (fastify) => {
     if (!force) {
       reply.code(HTTPStatus.FORBIDDEN);
 
-      return new Error('You must provide "force=true" queryparam to ensure this operation.');
+      return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
     const deletedMovies = await DB('movies').where(query);

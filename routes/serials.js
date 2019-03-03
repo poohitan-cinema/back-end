@@ -49,7 +49,7 @@ const router = async (fastify) => {
     if (!serial) {
       reply.code(HTTPStatus.NOT_FOUND);
 
-      return {};
+      throw new Error();
     }
 
     return serial;
@@ -99,11 +99,13 @@ const router = async (fastify) => {
     return deletedSerial;
   });
 
-  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
+  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {
-      return new Error('You must provide "force=true" queryparam to ensure this operation.');
+      reply.code(HTTPStatus.FORBIDDEN);
+
+      return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
     const deletedSerials = await DB('serials').where(query);
@@ -115,7 +117,7 @@ const router = async (fastify) => {
     return deletedSerials;
   });
 
-  fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request) => {
     const { season: seasonNumber, urls } = request.body;
 
     const [serial] = await DB('serials')
@@ -155,8 +157,6 @@ const router = async (fastify) => {
           .where({ id: episode.videoId });
       }),
     );
-
-    reply.code(HTTPStatus.OK);
 
     return {};
   });

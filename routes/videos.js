@@ -1,5 +1,4 @@
 const HTTPStatus = require('http-status-codes');
-
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
 const getStaticContentURL = require('../helpers/get-static-content-url');
@@ -47,7 +46,7 @@ const router = async (fastify) => {
     reply.send({ id });
   });
 
-  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { url, ...rest } = request.body;
 
     await DB('videos')
@@ -57,31 +56,31 @@ const router = async (fastify) => {
       })
       .where({ id: request.params.id });
 
-    reply.send(HTTPStatus.OK);
+    return {};
   });
 
-  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request, reply) => {
+  fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
     await DB('videos')
       .where({ id: request.params.id })
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return {};
   });
 
   fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {
-      reply.send('You must provide "force=true" queryparam to ensure this operation.');
+      reply.code(HTTPStatus.FORBIDDEN);
 
-      return;
+      throw new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
     await DB('videos')
       .where(query)
       .delete();
 
-    reply.send(HTTPStatus.OK);
+    return {};
   });
 };
 

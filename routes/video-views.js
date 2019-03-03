@@ -133,7 +133,7 @@ const router = async (fastify) => {
     if (!videoView) {
       reply.code(HTTPStatus.NOT_FOUND);
 
-      return {};
+      throw new Error();
     }
 
     return videoView;
@@ -148,7 +148,7 @@ const router = async (fastify) => {
     if (!(videoId && userId && endTime)) {
       reply.code(HTTPStatus.UNPROCESSABLE_ENTITY);
 
-      return {};
+      throw new Error();
     }
 
     await DB('video_views')

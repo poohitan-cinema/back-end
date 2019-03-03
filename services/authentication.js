@@ -27,7 +27,7 @@ async function injectCurrentUser(request) {
     request.currentUser = user;
     request.token = token;
   } catch (error) {
-    throw new Error('Невалідний токен авторизації.');
+    throw new Error('Невалідний токен авторизації');
   }
 }
 

@@ -1,5 +1,6 @@
 const HTTPStatus = require('http-status-codes');
 const jwt = require('jsonwebtoken');
+const StringSimilarity = require('string-similarity');
 
 const config = require('../config');
 const DB = require('../services/db');
@@ -16,20 +17,34 @@ const options = {
 
 const router = async (server) => {
   server.post('/', options, async (request, reply) => {
-    const { name, password } = request.body;
+    const { body } = request;
 
-    const [user] = await DB('users')
-      .where({ name })
+    // Username can't contain whitespace,
+    // if it does, it's better to reject the request straight away
+    // to avoid possible SQL injection
+    if (/\s/g.test(body.name)) {
+      reply.code(HTTPStatus.UNPROCESSABLE_ENTITY);
+
+      throw new Error('Ім\'я не може містити пропусків');
+    }
+
+    const [user = {}] = await DB('users')
+      .whereRaw(`lower(name) = '${body.name.toLowerCase()}'`)
       .limit(1);
 
-    if (user.password !== password) {
+    if (user.password !== body.password) {
+      const passwordsSimilarity = StringSimilarity.compareTwoStrings(user.password, body.password);
+      const errorMessage = passwordsSimilarity > 0.5
+        ? 'Пароль схожий, але неправильний'
+        : 'Неправильне ім\'я або пароль';
+
       reply.code(HTTPStatus.UNAUTHORIZED);
 
-      return {};
+      throw new Error(errorMessage);
     }
 
     const token = jwt.sign({ id: user.id }, config.jwtSecret);
-    const { id, role } = user;
+    const { id, name, role } = user;
     const safeUser = { id, name, role };
 
     reply

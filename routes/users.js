@@ -14,6 +14,8 @@ const options = {
   },
 };
 
+const DEFAULT_ROLE = 'user';
+
 const router = async (fastify) => {
   fastify.addHook('preHandler', Auth.checkAdminRights);
 
@@ -29,15 +31,27 @@ const router = async (fastify) => {
     if (!user) {
       reply.code(HTTPStatus.NOT_FOUND);
 
-      return {};
+      throw new Error();
     }
 
     return user;
   });
 
-  fastify.post('/', options, async (request) => {
+  fastify.post('/', options, async (request, reply) => {
+    const { name, password, role = DEFAULT_ROLE } = request.body;
+
+    if (!(name && password && role)) {
+      reply.code(HTTPStatus.UNPROCESSABLE_ENTITY);
+
+      throw new Error('Запит повинен містити ім\'я користувача і його пароль');
+    }
+
     await DB('users')
-      .insert(request.body);
+      .insert({
+        name,
+        password,
+        role,
+      });
 
     const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
     const [createdUser] = await DB('users').where({ id });

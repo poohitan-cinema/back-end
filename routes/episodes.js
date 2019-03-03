@@ -110,7 +110,7 @@ const router = async (fastify) => {
     if (!episode) {
       reply.code(HTTPStatus.NOT_FOUND);
 
-      return {};
+      throw new Error();
     }
 
     return episode;
@@ -189,7 +189,7 @@ const router = async (fastify) => {
     if (!force) {
       reply.code(HTTPStatus.FORBIDDEN);
 
-      return new Error('You must provide "force=true" queryparam to ensure this operation.');
+      return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
     const deletedEpisodes = await DB('episodes').where(query);

@@ -52,7 +52,7 @@ const router = async (fastify) => {
     if (!season) {
       reply.code(HTTPStatus.NOT_FOUND);
 
-      return {};
+      throw new Error();
     }
 
     return season;
@@ -100,11 +100,13 @@ const router = async (fastify) => {
     return deletedSeason;
   });
 
-  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
+  fastify.delete('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { force, ...query } = request.query;
 
     if (!force) {
-      return new Error('You must provide "force=true" queryparam to ensure this operation.');
+      reply.code(HTTPStatus.FORBIDDEN);
+
+      return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
     const deletedSeasons = await DB('seasons').where(query);
