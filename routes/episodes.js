@@ -139,7 +139,7 @@ const router = async (fastify) => {
       .select('e.*', 'v.url')
       .from('episodes as e')
       .innerJoin('videos as v', 'e.video_id', 'v.id')
-      .where({ id });
+      .where({ 'e.id': id });
 
     return createdEpisode;
   });

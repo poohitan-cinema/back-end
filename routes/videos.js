@@ -16,8 +16,13 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+    const { url, ...query } = request.query;
+
     const videos = await DB('videos')
-      .where(request.query);
+      .where({
+        url: encodeURI(url),
+        ...query,
+      });
 
     reply.send(videos);
   });

@@ -14,17 +14,21 @@ async function injectCurrentUser(request) {
     return;
   }
 
-  await verifyToken(token, config.jwtSecret);
+  try {
+    await verifyToken(token, config.jwtSecret);
 
-  const { id } = jwt.decode(token);
-  const [user] = await DB
-    .select('users.id', 'users.name', 'users.role')
-    .from('users')
-    .where({ id })
-    .limit(1);
+    const { id } = jwt.decode(token);
+    const [user] = await DB
+      .select('users.id', 'users.name', 'users.role')
+      .from('users')
+      .where({ id })
+      .limit(1);
 
-  request.currentUser = user;
-  request.token = token;
+    request.currentUser = user;
+    request.token = token;
+  } catch (error) {
+    throw new Error('Невалідний токен авторизації.');
+  }
 }
 
 async function checkUserRights(request, reply) {
