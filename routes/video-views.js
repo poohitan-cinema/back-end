@@ -33,7 +33,7 @@ async function getEpisodesViewsDetailed({ where, limit }) {
     )
     .from('VideoView')
     .innerJoin('Video', 'VideoView.video_id', 'Video.id')
-    .innerJoin('Episode', 'Episode.video_id', 'Video.id')
+    .leftJoin('Episode', 'Episode.video_id', 'Video.id')
     .innerJoin('Season', 'Season.id', 'Episode.season_id')
     .innerJoin('Serial', 'Serial.id', 'Season.serial_id')
     .where(where)
@@ -92,7 +92,8 @@ const router = async (fastify) => {
       .where({
         'Season.number': lastEpisodeView.seasonNumber,
         'Serial.slug': lastEpisodeView.serialSlug,
-      });
+      })
+      .orderByRaw('CAST(Episode.number AS INT)');
 
     const indexOfCurrentEpisode = episodes.map(item => item.id).indexOf(lastEpisodeView.episodeId);
 

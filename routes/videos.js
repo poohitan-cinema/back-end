@@ -21,7 +21,7 @@ const router = async (fastify) => {
 
     const videos = await DB('Video')
       .where({
-        url: encodeURI(url),
+        url: url ? encodeURI(url) : undefined,
         ...query,
       });
 

@@ -119,7 +119,19 @@ const router = async (fastify) => {
     return deletedSerials;
   });
 
-  fastify.post('/:slug/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request) => {
+  fastify.post('/:slug/batch-add-episode-urls', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['season', 'urls'],
+        properties: {
+          season: { type: 'string' },
+          urls: { type: 'object' },
+        },
+      },
+    },
+    preHandler: Auth.checkAdminRights,
+  }, async (request) => {
     const { season: seasonNumber, urls } = request.body;
 
     const [serial] = await DB('Serial')
@@ -154,9 +166,9 @@ const router = async (fastify) => {
           .then(() => DB('Video').where({ id: videoId }));
 
         if (episode) {
-          await DB('Episode').update({
-            video_id: video.id,
-          });
+          await DB('Episode')
+            .update({ video_id: video.id })
+            .where({ id: episode.id });
 
           updatedEpisodes.push(episode.id);
         } else {
