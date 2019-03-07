@@ -24,6 +24,7 @@ async function getEpisodesViewsDetailed({ where, limit }) {
   return DB
     .select(
       'VideoView.*',
+      'Episode.id as episode_id',
       'Episode.title as episode_title',
       'Episode.number as episode_number',
       'Season.number as season_number',
@@ -83,27 +84,42 @@ const router = async (fastify) => {
       return null;
     }
 
-    const [nextEpisode] = await DB
-      .select(
-        'Episode.id',
-        'Episode.number',
-        'Episode.title',
-        'Season.number as season_number',
-        'Serial.slug as serial_slug',
-      )
+    const episodes = await DB
+      .select('Episode.*')
       .from('Episode')
       .innerJoin('Season', 'Episode.season_id', 'Season.id')
       .innerJoin('Serial', 'Season.serial_id', 'Serial.id')
       .where({
-        'Episode.number': `${Number(lastEpisodeView.episodeNumber) + 1}`,
         'Season.number': lastEpisodeView.seasonNumber,
         'Serial.slug': lastEpisodeView.serialSlug,
-      })
-      .orWhere({
-        'Episode.number': '1',
-        'Season.number': lastEpisodeView.seasonNumber + 1,
-        'Serial.slug': lastEpisodeView.serialSlug,
       });
+
+    const indexOfCurrentEpisode = episodes.map(item => item.id).indexOf(lastEpisodeView.episodeId);
+
+    let nextEpisode;
+
+    if (episodes.length > indexOfCurrentEpisode + 1) {
+      nextEpisode = {
+        seasonNumber: lastEpisodeView.seasonNumber,
+        ...episodes[indexOfCurrentEpisode + 1],
+      };
+    } else {
+      [nextEpisode] = await DB
+        .select(
+          'Episode.id',
+          'Episode.number',
+          'Episode.title',
+          'Season.number as season_number',
+          'Serial.slug as serial_slug',
+        )
+        .from('Episode')
+        .innerJoin('Season', 'Episode.season_id', 'Season.id')
+        .innerJoin('Serial', 'Season.serial_id', 'Serial.id')
+        .where({
+          'Serial.slug': lastEpisodeView.serialSlug,
+          'Season.number': `${Number(lastEpisodeView.seasonNumber) + 1}`,
+        });
+    }
 
     return {
       ...lastEpisodeView,
