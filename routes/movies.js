@@ -77,7 +77,7 @@ const router = async (fastify) => {
     const videoId = uuid.v4();
 
     if (url) {
-      await DB('videos').insert({
+      await DB('Video').insert({
         id: videoId,
         url: getStaticContentURL(url),
       });
@@ -85,7 +85,7 @@ const router = async (fastify) => {
 
     const id = uuid.v4();
 
-    await DB('movies')
+    await DB('Movie')
       .insert({
         id,
         ...rest,

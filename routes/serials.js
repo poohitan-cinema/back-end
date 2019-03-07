@@ -144,7 +144,7 @@ const router = async (fastify) => {
         if (episode && episode.videoId) {
           skippedEpisodes.push(episode.id);
 
-          return Promise.resolve();
+          return;
         }
 
         const videoId = uuid.v4();
