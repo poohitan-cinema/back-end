@@ -13,6 +13,8 @@ async function dump() {
     .whereRaw('type =\'table\' AND name NOT LIKE \'sqlite_%\'')
     .map(item => item.name);
 
+  console.log('Tables list:', tablesList);
+
   return Promise.all(
     tablesList.map(async (tableName) => {
       const tableData = await DB(tableName);
