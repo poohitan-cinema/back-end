@@ -12,16 +12,16 @@ const options = {
     querystring: {
       number: { type: 'string' },
       title: { type: 'string' },
-      videoId: { type: 'number' },
-      seasonId: { type: 'number' },
+      videoId: { type: 'string' },
+      seasonId: { type: 'string' },
     },
     body: {
       properties: {
         number: { type: 'string' },
         title: { type: 'string' },
         description: { type: 'string' },
-        videoId: { type: 'number' },
-        seasonId: { type: 'number' },
+        videoId: { type: 'string' },
+        seasonId: { type: 'string' },
       },
     },
   },

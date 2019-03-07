@@ -7,14 +7,14 @@ const Auth = require('../services/authentication');
 const options = {
   schema: {
     querystring: {
-      userId: { type: 'number' },
-      videoId: { type: 'number' },
+      userId: { type: 'string' },
+      videoId: { type: 'string' },
     },
     body: {
       properties: {
         endTime: { type: 'number' },
-        userId: { type: 'number' },
-        videoId: { type: 'number' },
+        userId: { type: 'string' },
+        videoId: { type: 'string' },
       },
     },
   },

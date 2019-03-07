@@ -8,14 +8,14 @@ const Auth = require('../services/authentication');
 const options = {
   schema: {
     querystring: {
-      number: { type: 'number' },
-      serialId: { type: 'number' },
+      number: { type: 'string' },
+      serialId: { type: 'string' },
     },
     body: {
       properties: {
-        number: { type: 'number' },
+        number: { type: 'string' },
         cover: { type: 'string' },
-        serialId: { type: 'number' },
+        serialId: { type: 'string' },
       },
     },
   },
