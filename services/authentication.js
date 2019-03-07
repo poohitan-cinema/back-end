@@ -18,9 +18,8 @@ async function injectCurrentUser(request) {
     await verifyToken(token, config.jwtSecret);
 
     const { id } = jwt.decode(token);
-    const [user] = await DB
-      .select('users.id', 'users.name', 'users.role')
-      .from('users')
+    const [user] = await DB('User')
+      .select('id', 'name', 'role')
       .where({ id })
       .limit(1);
 

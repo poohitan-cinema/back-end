@@ -1,4 +1,5 @@
 const HTTPStatus = require('http-status-codes');
+const uuid = require('uuid');
 
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
@@ -23,7 +24,7 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
-    const serials = await DB('serials')
+    const serials = await DB('Serial')
       .where(request.query);
 
     return serials;
@@ -32,10 +33,10 @@ const router = async (fastify) => {
   fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { slug } = request.query;
 
-    const [serial] = await DB('serials').where({ slug });
-    const seasons = await DB('seasons')
+    const [serial] = await DB('Serial').where({ slug });
+    const seasons = await DB('Season')
       .where({ serial_id: serial.id })
-      .orderBy('number', 'asc');
+      .orderByRaw('CAST(number AS INT)');
 
     return {
       ...serial,
@@ -44,7 +45,7 @@ const router = async (fastify) => {
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const [serial] = await DB('serials').where({ id: request.params.id });
+    const [serial] = await DB('Serial').where({ id: request.params.id });
 
     if (!serial) {
       reply.code(HTTPStatus.NOT_FOUND);
@@ -57,16 +58,17 @@ const router = async (fastify) => {
 
   fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { icon, cover, ...rest } = request.body;
+    const id = uuid.v4();
 
-    await DB('serials')
+    await DB('Serial')
       .insert({
+        id,
         ...rest,
         icon: getStaticContentURL(icon),
         cover: getStaticContentURL(cover),
       });
 
-    const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
-    const [createdSerial] = await DB('serials').where({ id });
+    const [createdSerial] = await DB('Serial').where({ id });
 
     return createdSerial;
   });
@@ -75,7 +77,7 @@ const router = async (fastify) => {
     const { id } = request.params;
     const { icon, cover, ...rest } = request.body;
 
-    await DB('serials')
+    await DB('Serial')
       .update({
         ...rest,
         icon: getStaticContentURL(icon),
@@ -83,16 +85,16 @@ const router = async (fastify) => {
       })
       .where({ id });
 
-    const [updatedSerial] = await DB('serials').where({ id });
+    const [updatedSerial] = await DB('Serial').where({ id });
 
     return updatedSerial;
   });
 
   fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
     const { id } = request.params;
-    const [deletedSerial] = await DB('serials').where({ id });
+    const [deletedSerial] = await DB('Serial').where({ id });
 
-    await DB('serials')
+    await DB('Serial')
       .where({ id })
       .delete();
 
@@ -108,9 +110,9 @@ const router = async (fastify) => {
       return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
-    const deletedSerials = await DB('serials').where(query);
+    const deletedSerials = await DB('Serial').where(query);
 
-    await DB('serials')
+    await DB('Serial')
       .where(query)
       .delete();
 
@@ -120,10 +122,13 @@ const router = async (fastify) => {
   fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request) => {
     const { season: seasonNumber, urls } = request.body;
 
-    const [serial] = await DB('serials')
+    const [serial] = await DB('Serial')
       .where({ id: request.params.id });
 
-    const [season] = await DB('seasons').where({ serial_id: serial.id, number: seasonNumber });
+    const [season] = await DB('Season').where({ serial_id: serial.id, number: seasonNumber });
+
+    const affectedEpisodes = [];
+    const skippedEpisodes = [];
 
     await Promise.all(
       Object.keys(urls).map(async (episodeNumber) => {
@@ -131,34 +136,46 @@ const router = async (fastify) => {
         const url = getStaticContentURL(rawUrl);
         const number = Number(episodeNumber);
 
-        const [episode] = await DB('episodes')
+        const [episode] = await DB('Episode')
           .where({ season_id: season.id, number });
 
-        if (!episode.videoId) {
-          return DB('videos').insert({ url })
-            .then(() => DB('videos').where({ url }))
-            .then(([video]) => {
-              if (episode) {
-                return DB('episodes')
-                  .update({ video_id: video.id })
-                  .where({ id: episode.id });
-              }
+        // Skip if episode already exists (do not override)
+        if (episode) {
+          skippedEpisodes.push(episode.id);
 
-              return DB('episodes').insert({
-                number,
-                season_id: season.id,
-                video_id: video.id,
-              });
-            });
+          return Promise.resolve();
         }
 
-        return DB('videos')
-          .update({ url })
-          .where({ id: episode.videoId });
+        const videoId = uuid.v4();
+
+        return DB('Video').insert({ id: videoId, url })
+          .then(() => DB('Video').where({ id: videoId }))
+          .then(([video]) => {
+            if (episode) {
+              return DB('Episode')
+                .update({ video_id: video.id })
+                .where({ id: episode.id })
+                .then(() => episode);
+            }
+
+            return DB('Episode').insert({
+              number,
+              season_id: season.id,
+              video_id: video.id,
+            })
+              .then(() => DB('Episode')
+                .where({ video_id: video.id }));
+          })
+          .then((affectedEpisode) => {
+            affectedEpisodes.push(affectedEpisode.id);
+          });
       }),
     );
 
-    return {};
+    return {
+      affectedEpisodes,
+      skippedEpisodes,
+    };
   });
 };
 

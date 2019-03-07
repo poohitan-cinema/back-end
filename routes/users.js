@@ -1,4 +1,5 @@
 const HTTPStatus = require('http-status-codes');
+const uuid = require('uuid');
 
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
@@ -20,13 +21,13 @@ const router = async (fastify) => {
   fastify.addHook('preHandler', Auth.checkAdminRights);
 
   fastify.get('/', options, async () => {
-    const users = await DB('users');
+    const users = await DB('User');
 
     return users;
   });
 
   fastify.get('/:id', async (request, reply) => {
-    const [user] = await DB('users').where({ id: request.params.id });
+    const [user] = await DB('User').where({ id: request.params.id });
 
     if (!user) {
       reply.code(HTTPStatus.NOT_FOUND);
@@ -46,15 +47,17 @@ const router = async (fastify) => {
       throw new Error('Запит повинен містити ім\'я користувача і його пароль');
     }
 
-    await DB('users')
+    const id = uuid.v4();
+
+    await DB('User')
       .insert({
+        id,
         name,
         password,
         role,
       });
 
-    const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
-    const [createdUser] = await DB('users').where({ id });
+    const [createdUser] = await DB('User').where({ id });
 
     return createdUser;
   });
@@ -62,20 +65,20 @@ const router = async (fastify) => {
   fastify.patch('/:id', options, async (request) => {
     const { id } = request.params;
 
-    await DB('users')
+    await DB('User')
       .update(request.body)
       .where({ id: request.params });
 
-    const [updatedUser] = await DB('users').where({ id });
+    const [updatedUser] = await DB('User').where({ id });
 
     return updatedUser;
   });
 
   fastify.delete('/:id', async (request) => {
     const { id } = request.params;
-    const [deletedUser] = await DB('users').where({ id });
+    const [deletedUser] = await DB('User').where({ id });
 
-    await DB('users')
+    await DB('User')
       .where({ id: request.params.id })
       .delete();
 
