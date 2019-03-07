@@ -45,6 +45,7 @@ const config = {
 };
 
 module.exports = {
+  environment,
   ...shared,
   ...config[environment],
 };

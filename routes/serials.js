@@ -119,28 +119,29 @@ const router = async (fastify) => {
     return deletedSerials;
   });
 
-  fastify.post('/:id/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request) => {
+  fastify.post('/:slug/batch-add-episode-urls', { preHandler: Auth.checkAdminRights }, async (request) => {
     const { season: seasonNumber, urls } = request.body;
 
     const [serial] = await DB('Serial')
-      .where({ id: request.params.id });
+      .where({ slug: request.params.slug });
 
     const [season] = await DB('Season').where({ serial_id: serial.id, number: seasonNumber });
 
-    const affectedEpisodes = [];
+    const createdEpisodes = [];
+    const updatedEpisodes = [];
     const skippedEpisodes = [];
 
     await Promise.all(
       Object.keys(urls).map(async (episodeNumber) => {
         const rawUrl = urls[episodeNumber];
         const url = getStaticContentURL(rawUrl);
-        const number = Number(episodeNumber);
+        const number = episodeNumber;
 
         const [episode] = await DB('Episode')
           .where({ season_id: season.id, number });
 
-        // Skip if episode already exists (do not override)
-        if (episode) {
+        // Skip if episode already exists and has a connected video (do not override)
+        if (episode && episode.videoId) {
           skippedEpisodes.push(episode.id);
 
           return Promise.resolve();
@@ -148,32 +149,34 @@ const router = async (fastify) => {
 
         const videoId = uuid.v4();
 
-        return DB('Video').insert({ id: videoId, url })
-          .then(() => DB('Video').where({ id: videoId }))
-          .then(([video]) => {
-            if (episode) {
-              return DB('Episode')
-                .update({ video_id: video.id })
-                .where({ id: episode.id })
-                .then(() => episode);
-            }
+        const [video] = await DB('Video')
+          .insert({ id: videoId, url })
+          .then(() => DB('Video').where({ id: videoId }));
 
-            return DB('Episode').insert({
-              number,
-              season_id: season.id,
-              video_id: video.id,
-            })
-              .then(() => DB('Episode')
-                .where({ video_id: video.id }));
-          })
-          .then((affectedEpisode) => {
-            affectedEpisodes.push(affectedEpisode.id);
+        if (episode) {
+          await DB('Episode').update({
+            video_id: video.id,
           });
+
+          updatedEpisodes.push(episode.id);
+        } else {
+          const id = uuid.v4();
+
+          await DB('Episode').insert({
+            id,
+            number,
+            season_id: season.id,
+            video_id: video.id,
+          });
+
+          createdEpisodes.push(id);
+        }
       }),
     );
 
     return {
-      affectedEpisodes,
+      createdEpisodes,
+      updatedEpisodes,
       skippedEpisodes,
     };
   });
