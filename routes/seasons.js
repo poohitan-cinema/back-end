@@ -1,4 +1,5 @@
 const HTTPStatus = require('http-status-codes');
+const uuid = require('uuid');
 
 const DB = require('../services/db');
 const getStaticContentURL = require('../helpers/get-static-content-url');
@@ -22,9 +23,8 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
-    const seasons = await DB('seasons')
-      .where(request.query)
-      .orderBy('number', 'asc');
+    const seasons = await DB('Season')
+      .where(request.query);
 
     return seasons;
   });
@@ -32,22 +32,22 @@ const router = async (fastify) => {
   fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { number, serial_slug: serialSlug } = request.query;
 
-    const [serial] = await DB('serials')
+    const [serial] = await DB('Serial')
       .where({ slug: serialSlug });
-    const [season] = await DB('seasons')
+    const [season] = await DB('Season')
       .where({ number, serial_id: serial.id });
     const episodes = await DB
-      .select('e.id', 'e.title', 'e.number', 'v.url')
-      .from('episodes as e')
+      .select('Episode.id', 'Episode.title', 'Episode.number', 'Video.url')
+      .from('Episode')
       .where({ season_id: season.id })
-      .innerJoin('videos as v', 'e.video_id', 'v.id')
-      .orderByRaw('CAST(e.number AS INT)');
+      .innerJoin('Video', 'Episode.video_id', 'Video.id')
+      .orderByRaw('CAST(Episode.number AS INT)');
 
     return { ...season, serial, episodes };
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const [season] = await DB('seasons').where({ id: request.params.id });
+    const [season] = await DB('Season').where({ id: request.params.id });
 
     if (!season) {
       reply.code(HTTPStatus.NOT_FOUND);
@@ -60,15 +60,16 @@ const router = async (fastify) => {
 
   fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { cover, ...rest } = request.body;
+    const id = uuid.v4();
 
-    await DB('seasons')
+    await DB('Season')
       .insert({
+        id,
         ...rest,
         cover: getStaticContentURL(cover),
       });
 
-    const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
-    const [createdSeason] = await DB('seasons').where({ id });
+    const [createdSeason] = await DB('Season').where({ id });
 
     return createdSeason;
   });
@@ -77,23 +78,23 @@ const router = async (fastify) => {
     const { id } = request.params;
     const { cover, ...rest } = request.body;
 
-    await DB('seasons')
+    await DB('Season')
       .update({
         ...rest,
         cover: getStaticContentURL(cover),
       })
       .where({ id });
 
-    const [updatedSeason] = await DB('seasons').where({ id });
+    const [updatedSeason] = await DB('Season').where({ id });
 
     return updatedSeason;
   });
 
   fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
     const { id } = request.params;
-    const [deletedSeason] = await DB('seasons').where({ id });
+    const [deletedSeason] = await DB('Season').where({ id });
 
-    await DB('seasons')
+    await DB('Season')
       .where({ id })
       .delete();
 
@@ -109,9 +110,9 @@ const router = async (fastify) => {
       return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
-    const deletedSeasons = await DB('seasons').where(query);
+    const deletedSeasons = await DB('Season').where(query);
 
-    await DB('seasons')
+    await DB('Season')
       .where(query)
       .delete();
 

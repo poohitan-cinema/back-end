@@ -21,14 +21,14 @@ const router = async (server) => {
 
     // Username can't contain whitespace,
     // if it does, it's better to reject the request straight away
-    // to avoid possible SQL injection
+    // to avoid possible SQL injections
     if (/\s/g.test(body.name)) {
       reply.code(HTTPStatus.UNPROCESSABLE_ENTITY);
 
       throw new Error('Ім\'я не може містити пропусків');
     }
 
-    const [user = {}] = await DB('users')
+    const [user = {}] = await DB('User')
       .whereRaw(`lower(name) = '${body.name.toLowerCase()}'`)
       .limit(1);
 

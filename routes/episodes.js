@@ -1,4 +1,5 @@
 const HTTPStatus = require('http-status-codes');
+const uuid = require('uuid');
 const htmlToText = require('html-to-text');
 
 const DB = require('../services/db');
@@ -29,10 +30,10 @@ const options = {
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const episodes = await DB
-      .select('e.*', 'v.url')
-      .from('episodes as e')
+      .select('Episode.*', 'Video.url')
+      .from('Episode')
       .where(request.query)
-      .innerJoin('videos as v', 'e.video_id', 'v.id')
+      .innerJoin('Video', 'Episode.video_id', 'Video.id')
       .orderByRaw('CAST(number AS INT)');
 
     return episodes;
@@ -41,14 +42,14 @@ const router = async (fastify) => {
   fastify.get('/detailed', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const { number, season_number: seasonNumber, serial_slug: serialSlug } = request.query;
 
-    const [serial] = await DB('serials').where({ slug: serialSlug });
-    const [season] = await DB('seasons').where({ number: seasonNumber, serial_id: serial.id });
+    const [serial] = await DB('Serial').where({ slug: serialSlug });
+    const [season] = await DB('Season').where({ number: seasonNumber, serial_id: serial.id });
 
     const episodes = await DB
-      .select('e.*', 'v.url')
-      .from('episodes as e')
+      .select('Episode.*', 'Video.url')
+      .from('Episode')
       .where({ season_id: season.id })
-      .innerJoin('videos as v', 'e.video_id', 'v.id')
+      .innerJoin('Video', 'Episode.video_id', 'Video.id')
       .orderByRaw('CAST(number AS INT)');
 
     const currentEpisode = episodes.find(episode => episode.number === number);
@@ -56,8 +57,11 @@ const router = async (fastify) => {
     const previousEpisode = episodes[indexOfCurrentEpisode - 1];
     const nextEpisode = episodes[indexOfCurrentEpisode + 1];
 
+    const tags = await DB('VideoTag').where({ video_id: currentEpisode.videoId });
+
     return {
       ...currentEpisode,
+      tags,
       nextEpisode,
       previousEpisode,
       season,
@@ -71,15 +75,15 @@ const router = async (fastify) => {
     let serial;
 
     if (serialId) {
-      [serial] = await DB('serials').where({ id: serialId });
+      [serial] = await DB('Serial').where({ id: serialId });
     } else {
       // Select serials which have episodes
       const serials = await DB
-        .select('s.*')
-        .from('episodes as e')
-        .leftJoin('seasons as se', 'e.season_id', 'se.id')
-        .leftJoin('serials as s', 's.id', 'se.serial_id')
-        .distinct('s.id');
+        .select('Serial.*')
+        .from('Episode')
+        .leftJoin('Season', 'Episode.season_id', 'Season.id')
+        .leftJoin('Serial', 'Serial.id', 'Season.serial_id')
+        .distinct('Serial.id');
 
       // Choose a random one
       serial = Random.arrayElement(serials);
@@ -87,15 +91,15 @@ const router = async (fastify) => {
 
     // Select all episodes of the desired serial
     const episodes = await DB
-      .select('e.*', 'v.url')
-      .from('episodes as e')
-      .innerJoin('seasons as s', 'e.season_id', 's.id')
-      .innerJoin('videos as v', 'e.video_id', 'v.id')
-      .andWhere({ 's.serial_id': serial.id });
+      .select('Episode.*', 'Video.url')
+      .from('Episode')
+      .innerJoin('Season', 'Episode.season_id', 'Season.id')
+      .innerJoin('Video', 'Episode.video_id', 'Video.id')
+      .andWhere({ 'Season.serial_id': serial.id });
 
     const randomEpisode = Random.arrayElement(episodes.filter(episode => episode.url));
 
-    const [season] = await DB('seasons').where({ id: randomEpisode.seasonId });
+    const [season] = await DB('Season').where({ id: randomEpisode.seasonId });
 
     return {
       ...randomEpisode,
@@ -105,7 +109,7 @@ const router = async (fastify) => {
   });
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const [episode] = await DB('episodes').where({ id: request.params.id });
+    const [episode] = await DB('Episode').where({ id: request.params.id });
 
     if (!episode) {
       reply.code(HTTPStatus.NOT_FOUND);
@@ -118,28 +122,29 @@ const router = async (fastify) => {
 
   fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { url, ...rest } = request.body;
-    let videoId;
+    const videoId = uuid.v4();
 
     if (url) {
-      await DB('videos').insert({
+      await DB('Video').insert({
+        id: videoId,
         url: getStaticContentURL(url),
       });
-
-      [{ id: videoId }] = await DB.raw('SELECT last_insert_rowid() as "id"');
     }
 
-    await DB('episodes')
+    const id = uuid.v4();
+
+    await DB('Episode')
       .insert({
+        id,
         video_id: videoId,
         ...rest,
       });
 
-    const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
     const [createdEpisode] = await DB
-      .select('e.*', 'v.url')
-      .from('episodes as e')
-      .innerJoin('videos as v', 'e.video_id', 'v.id')
-      .where({ 'e.id': id });
+      .select('Episode.*', 'Video.url')
+      .from('Episode')
+      .innerJoin('Video', 'Episode.video_id', 'Video.id')
+      .where({ 'Episode.id': id });
 
     return createdEpisode;
   });
@@ -155,7 +160,7 @@ const router = async (fastify) => {
       ? htmlToText.fromString(description, { wordwrap: false })
       : undefined;
 
-    await DB('episodes')
+    await DB('Episode')
       .update({
         title: sanitizedTitle,
         description: sanitizedDescription,
@@ -164,19 +169,19 @@ const router = async (fastify) => {
       .where({ id });
 
     const [updatedEpisode] = await DB
-      .select('e.*', 'v.url')
-      .from('episodes as e')
-      .innerJoin('videos as v', 'e.video_id', 'v.id')
-      .where({ 'e.id': id });
+      .select('Episode.*', 'Video.url')
+      .from('Episode')
+      .innerJoin('Video', 'Episode.video_id', 'Video.id')
+      .where({ 'Episode.id': id });
 
     return updatedEpisode;
   });
 
   fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
     const { id } = request.params;
-    const [deletedEpisode] = await DB('episodes').where({ id });
+    const [deletedEpisode] = await DB('Episode').where({ id });
 
-    await DB('episodes')
+    await DB('Episode')
       .where({ id })
       .delete();
 
@@ -192,9 +197,9 @@ const router = async (fastify) => {
       return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
-    const deletedEpisodes = await DB('episodes').where(query);
+    const deletedEpisodes = await DB('Episode').where(query);
 
-    await DB('episodes')
+    await DB('Episode')
       .where(query)
       .delete();
 

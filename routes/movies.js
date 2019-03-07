@@ -1,4 +1,5 @@
 const HTTPStatus = require('http-status-codes');
+const uuid = require('uuid');
 
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
@@ -29,8 +30,8 @@ const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const movies = await DB
       .select('m.*', 'v.url')
-      .from('movies as m')
-      .innerJoin('videos as v', 'm.video_id', 'v.id')
+      .from('Movie as m')
+      .innerJoin('Video as v', 'm.video_id', 'v.id')
       .where(request.query);
 
     return movies;
@@ -38,9 +39,9 @@ const router = async (fastify) => {
 
   fastify.get('/random', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const movies = await DB
-      .select('m.*', 'v.url')
-      .from('movies as m')
-      .innerJoin('videos as v', 'm.video_id', 'v.id')
+      .select('Movie.*', 'Video.url')
+      .from('Movie')
+      .innerJoin('Video', 'Movie.video_id', 'Video.id')
       .where(request.query);
 
     if (!movies.length) {
@@ -54,9 +55,9 @@ const router = async (fastify) => {
 
   fastify.get('/:id', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const [movie] = await DB
-      .select('m.*', 'v.url')
-      .from('movies as m')
-      .innerJoin('videos as v', 'm.video_id', 'v.id')
+      .select('Movie.*', 'Video.url')
+      .from('Movie')
+      .innerJoin('Video', 'Movie.video_id', 'Video.id')
       .where({ id: request.params.id });
 
     if (!movie) {
@@ -73,30 +74,31 @@ const router = async (fastify) => {
       icon, cover, url, ...rest
     } = request.body;
 
-    let videoId;
+    const videoId = uuid.v4();
 
     if (url) {
       await DB('videos').insert({
+        id: videoId,
         url: getStaticContentURL(url),
       });
-
-      [{ id: videoId }] = await DB.raw('SELECT last_insert_rowid() as "id"');
     }
+
+    const id = uuid.v4();
 
     await DB('movies')
       .insert({
+        id,
         ...rest,
         icon: getStaticContentURL(icon),
         cover: getStaticContentURL(cover),
         video_id: videoId,
       });
 
-    const [{ id }] = await DB.raw('SELECT last_insert_rowid() as "id"');
     const [createdMovie] = await DB
-      .select('m.*', 'v.url')
-      .from('movies as m')
-      .innerJoin('videos as v', 'm.video_id', 'v.id')
-      .where({ id });
+      .select('Movie.*', 'Video.url')
+      .from('Movie')
+      .innerJoin('Video', 'Movie.video_id', 'Video.id')
+      .where({ 'Movie.id': id });
 
     return createdMovie;
   });
@@ -107,7 +109,7 @@ const router = async (fastify) => {
       icon, cover, ...rest
     } = request.body;
 
-    await DB('movies')
+    await DB('Movie')
       .update({
         ...rest,
         icon: getStaticContentURL(icon),
@@ -116,19 +118,19 @@ const router = async (fastify) => {
       .where({ id });
 
     const [updatedMovie] = await DB
-      .select('m.*', 'v.url')
-      .from('movies as m')
-      .innerJoin('videos as v', 'm.video_id', 'v.id')
-      .where({ id });
+      .select('Movie.*', 'Video.url')
+      .from('Movie')
+      .innerJoin('Video', 'Movie.video_id', 'Video.id')
+      .where({ 'Movie.id': id });
 
     return updatedMovie;
   });
 
   fastify.delete('/:id', { preHandler: Auth.checkAdminRights }, async (request) => {
     const { id } = request.params;
-    const [deletedMovie] = await DB('movies').where({ id });
+    const [deletedMovie] = await DB('Movie').where({ id });
 
-    await DB('movies')
+    await DB('Movie')
       .where({ id })
       .delete();
 
@@ -144,9 +146,9 @@ const router = async (fastify) => {
       return new Error('Це небезпечна операція. Для підтвердження треба додати параметр "?force=true"');
     }
 
-    const deletedMovies = await DB('movies').where(query);
+    const deletedMovies = await DB('Movie').where(query);
 
-    await DB('movies')
+    await DB('Movie')
       .where(query)
       .delete();
 
