@@ -15,12 +15,16 @@ const shared = {
 
 const config = {
   development: {
+    frontEndDomain: 'localhost:7300',
+
     db: knexfile.development,
     corsWhiteList: ['http://localhost:7300'],
 
     jwtSecret: 'jwtsecret',
   },
   production: {
+    frontEndDomain: 'cinema.poohitan.com',
+
     db: knexfile.production,
     corsWhiteList: ['http://cinema.poohitan.com', 'https://cinema.poohitan.com'],
 

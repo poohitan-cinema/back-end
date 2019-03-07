@@ -48,8 +48,8 @@ const router = async (server) => {
     const safeUser = { id, name, role };
 
     reply
-      .setCookie('token', token)
-      .setCookie('user', JSON.stringify(safeUser));
+      .setCookie('token', token, { domain: config.frontEndDomain })
+      .setCookie('user', JSON.stringify(safeUser), { domain: config.frontEndDomain });
 
     return {
       user: safeUser,
