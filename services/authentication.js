@@ -23,6 +23,10 @@ async function injectCurrentUser(request) {
       .where({ id })
       .limit(1);
 
+    if (!user) {
+      throw new Error(`Користувача з ID ${id} не знайдено`);
+    }
+
     request.currentUser = user;
     request.token = token;
   } catch (error) {

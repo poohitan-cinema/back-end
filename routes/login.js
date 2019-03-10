@@ -19,6 +19,12 @@ const router = async (server) => {
   server.post('/', options, async (request, reply) => {
     const { body } = request;
 
+    if (!(body.name && body.password)) {
+      reply.code(HTTPStatus.BAD_REQUEST);
+
+      throw new Error('Ім\'я і пароль не можуть бути порожні');
+    }
+
     // Username can't contain whitespace,
     // if it does, it's better to reject the request straight away
     // to avoid possible SQL injections
@@ -28,9 +34,15 @@ const router = async (server) => {
       throw new Error('Ім\'я не може містити пропусків');
     }
 
-    const [user = {}] = await DB('User')
+    const [user] = await DB('User')
       .whereRaw(`lower(name) = '${body.name.toLowerCase()}'`)
       .limit(1);
+
+    if (!user) {
+      reply.code(HTTPStatus.UNAUTHORIZED);
+
+      throw new Error('Неправильне ім\'я або пароль');
+    }
 
     if (user.password !== body.password) {
       const passwordsSimilarity = StringSimilarity.compareTwoStrings(user.password, body.password);
@@ -46,10 +58,6 @@ const router = async (server) => {
     const token = jwt.sign({ id: user.id }, config.jwtSecret);
     const { id, name, role } = user;
     const safeUser = { id, name, role };
-
-    reply
-      .setCookie('token', token, { domain: config.frontEndDomain })
-      .setCookie('user', JSON.stringify(safeUser), { domain: config.frontEndDomain });
 
     return {
       user: safeUser,
