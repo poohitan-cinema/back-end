@@ -1,6 +1,7 @@
 const HTTPStatus = require('http-status-codes');
 const jwt = require('jsonwebtoken');
 const StringSimilarity = require('string-similarity');
+const moment = require('moment');
 
 const config = require('../config');
 const DB = require('../services/db');
@@ -58,6 +59,18 @@ const router = async (server) => {
     const token = jwt.sign({ id: user.id }, config.jwtSecret);
     const { id, name, role } = user;
     const safeUser = { id, name, role };
+
+    const expires = moment().add(1, 'weeks').toDate();
+
+    reply
+      .setCookie('cinema-token', token, {
+        domain: config.cookieDomain,
+        expires,
+      })
+      .setCookie('cinema-user', JSON.stringify(safeUser), {
+        domain: config.cookieDomain,
+        expires,
+      });
 
     return {
       user: safeUser,

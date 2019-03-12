@@ -8,7 +8,7 @@ const DB = require('./db');
 const verifyToken = util.promisify(jwt.verify);
 
 async function injectCurrentUser(request) {
-  const token = request.cookies.token || request.query.token;
+  const token = request.cookies['cinema-token'] || request.query.token;
 
   if (!token) {
     return;
