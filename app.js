@@ -15,10 +15,12 @@ const movies = require('./routes/movies');
 const serials = require('./routes/serials');
 const seasons = require('./routes/seasons');
 const episodes = require('./routes/episodes');
+const videoProcessing = require('./routes/video-processing');
 
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
 const config = require('./config');
 
+fastify.register(require('fastify-file-upload'));
 fastify.register(require('fastify-cors'), { origin: config.corsWhiteList, credentials: true });
 fastify.register(require('fastify-cookie'), (error) => {
   if (error) throw error;
@@ -41,6 +43,7 @@ fastify.register(movies, { prefix: '/movies' });
 fastify.register(serials, { prefix: '/serials' });
 fastify.register(seasons, { prefix: '/seasons' });
 fastify.register(episodes, { prefix: '/episodes' });
+fastify.register(videoProcessing, { prefix: '/video-processing' });
 
 fastify.get('/', async (request, reply) => {
   reply.send(HTTPStatus.OK);
