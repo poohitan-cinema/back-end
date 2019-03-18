@@ -19,7 +19,6 @@
     "fastify-cookie": "^2.1.7",
     "fastify-cors": "^2.1.1",
     "fastify-file-upload": "^1.0.0",
-    "fastify-multipart": "^0.7.0",
     "html-to-text": "^4.0.0",
     "http-status-codes": "^1.3.0",
     "jsonwebtoken": "^8.4.0",

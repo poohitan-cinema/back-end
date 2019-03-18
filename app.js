@@ -15,6 +15,7 @@ const movies = require('./routes/movies');
 const serials = require('./routes/serials');
 const seasons = require('./routes/seasons');
 const episodes = require('./routes/episodes');
+const updates = require('./routes/updates');
 const videoProcessing = require('./routes/video-processing');
 
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
@@ -43,6 +44,7 @@ fastify.register(movies, { prefix: '/movies' });
 fastify.register(serials, { prefix: '/serials' });
 fastify.register(seasons, { prefix: '/seasons' });
 fastify.register(episodes, { prefix: '/episodes' });
+fastify.register(updates, { prefix: '/updates' });
 fastify.register(videoProcessing, { prefix: '/video-processing' });
 
 fastify.get('/', async (request, reply) => {

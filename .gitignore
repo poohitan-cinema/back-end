@@ -1,4 +1,5 @@
 node_modules
 *.sqlite3
+.DS_Store
 
 /tasks/scrapper/*.json

@@ -29,12 +29,15 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
+    const { limit = Number.POSITIVE_INFINITY, ...query } = request.query;
+
     const episodes = await DB
       .select('Episode.*', 'Video.url')
       .from('Episode')
-      .where(request.query)
+      .where(query)
       .innerJoin('Video', 'Episode.video_id', 'Video.id')
-      .orderByRaw('CAST(number AS INT)');
+      .orderBy('created_at', 'desc')
+      .limit(limit);
 
     return episodes;
   });
