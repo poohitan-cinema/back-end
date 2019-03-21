@@ -161,13 +161,13 @@ const router = async (fastify) => {
     return videoView;
   });
 
-  fastify.get('/stats', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+  fastify.get('/stats', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
     const {
       from = moment.utc().startOf('month').format(DATE_FORMAT),
       to = moment.utc().endOf('day').format(DATE_FORMAT),
     } = request.query;
 
-    const data = await DB
+    const stats = await DB
       .select(
         'User.id as user_id',
         'User.name as user_name',
@@ -185,23 +185,6 @@ const router = async (fastify) => {
       .leftJoin('Serial', 'Serial.id', 'Season.serial_id')
       .leftJoin('Movie', 'Movie.video_id', 'VideoView.video_id')
       .whereBetween('VideoView.created_at', [from, to]);
-
-    const stats = data.reduce((accumulator, dataItem) => {
-      const { userId, userName, ...rest } = dataItem;
-      const currentUserData = accumulator.find(item => item.userId === userId);
-
-      if (currentUserData) {
-        currentUserData.views.push({ ...rest });
-      } else {
-        accumulator.push({
-          userId,
-          userName,
-          views: [{ ...rest }],
-        });
-      }
-
-      return accumulator;
-    }, []);
 
     return { from, to, stats };
   });
