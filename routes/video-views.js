@@ -119,7 +119,8 @@ const router = async (fastify) => {
         .where({
           'Serial.slug': lastEpisodeView.serialSlug,
           'Season.number': `${Number(lastEpisodeView.seasonNumber) + 1}`,
-        });
+        })
+        .orderByRaw('CAST(Episode.number AS INT)');
     }
 
     return {
