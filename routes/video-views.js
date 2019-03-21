@@ -1,8 +1,11 @@
 const HTTPStatus = require('http-status-codes');
 const uuid = require('uuid');
+const moment = require('moment');
 
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
+
+const DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
 
 const options = {
   schema: {
@@ -158,6 +161,51 @@ const router = async (fastify) => {
     return videoView;
   });
 
+  fastify.get('/stats', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
+    const {
+      from = moment.utc().startOf('month').format(DATE_FORMAT),
+      to = moment.utc().endOf('day').format(DATE_FORMAT),
+    } = request.query;
+
+    const data = await DB
+      .select(
+        'User.id as user_id',
+        'User.name as user_name',
+        'VideoView.id as id',
+        'VideoView.created_at as created_at',
+        'Serial.title as serial_title',
+        'Season.number as season_number',
+        'Episode.number as episode_number',
+        'Movie.title as movie_title',
+      )
+      .from('User')
+      .innerJoin('VideoView', 'User.id', 'VideoView.user_id')
+      .leftJoin('Episode', 'Episode.video_id', 'VideoView.video_id')
+      .leftJoin('Season', 'Season.id', 'Episode.season_id')
+      .leftJoin('Serial', 'Serial.id', 'Season.serial_id')
+      .leftJoin('Movie', 'Movie.video_id', 'VideoView.video_id')
+      .whereBetween('VideoView.created_at', [from, to]);
+
+    const stats = data.reduce((accumulator, dataItem) => {
+      const { userId, userName, ...rest } = dataItem;
+      const currentUserData = accumulator.find(item => item.userId === userId);
+
+      if (currentUserData) {
+        currentUserData.views.push({ ...rest });
+      } else {
+        accumulator.push({
+          userId,
+          userName,
+          views: [{ ...rest }],
+        });
+      }
+
+      return accumulator;
+    }, []);
+
+    return { from, to, stats };
+  });
+
   fastify.post('/', { preHandler: Auth.checkUserRights }, async (request, reply) => {
     const { body } = request;
     const { videoId, userId, endTime } = typeof body === 'string'
@@ -171,6 +219,7 @@ const router = async (fastify) => {
     }
 
     const id = uuid.v4();
+
     await DB('VideoView')
       .insert({
         id,
