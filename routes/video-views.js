@@ -162,10 +162,15 @@ const router = async (fastify) => {
   });
 
   fastify.get('/stats', { ...options, preHandler: Auth.checkUserRights }, async (request) => {
-    const {
-      from = moment.utc().startOf('month').format(DATE_FORMAT),
-      to = moment.utc().endOf('day').format(DATE_FORMAT),
-    } = request.query;
+    const { from, to } = request.query;
+
+    const fromDate = from
+      ? moment(from).format(DATE_FORMAT)
+      : moment(0).format(DATE_FORMAT);
+
+    const toDate = to
+      ? moment(to).format(DATE_FORMAT)
+      : moment.utc().endOf('day').format(DATE_FORMAT);
 
     const stats = await DB
       .select(
@@ -184,9 +189,9 @@ const router = async (fastify) => {
       .leftJoin('Season', 'Season.id', 'Episode.season_id')
       .leftJoin('Serial', 'Serial.id', 'Season.serial_id')
       .leftJoin('Movie', 'Movie.video_id', 'VideoView.video_id')
-      .whereBetween('VideoView.created_at', [from, to]);
+      .whereBetween('VideoView.created_at', [fromDate, toDate]);
 
-    return { from, to, stats };
+    return { from: fromDate, to: toDate, stats };
   });
 
   fastify.post('/', { preHandler: Auth.checkUserRights }, async (request, reply) => {
