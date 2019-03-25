@@ -126,7 +126,6 @@ const router = async (fastify) => {
         required: ['season', 'urls'],
         properties: {
           season: { type: 'string' },
-          urls: { type: 'object' },
         },
       },
     },
@@ -143,11 +142,14 @@ const router = async (fastify) => {
     const updatedEpisodes = [];
     const skippedEpisodes = [];
 
+    const numberUrlPairs = Array.isArray(urls)
+      ? urls.map((url, index) => ({ number: `${Number(index) + 1}`, url }))
+      : Object.keys(urls).map(number => ({ number, url: urls[number] }));
+
     await Promise.all(
-      Object.keys(urls).map(async (episodeNumber) => {
-        const rawUrl = urls[episodeNumber];
+      numberUrlPairs.map(async (item) => {
+        const { url: rawUrl, number } = item;
         const url = getStaticContentURL(rawUrl);
-        const number = episodeNumber;
 
         const [episode] = await DB('Episode')
           .where({ season_id: season.id, number });
