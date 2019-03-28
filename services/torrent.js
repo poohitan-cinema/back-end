@@ -3,6 +3,31 @@ const _ = require('lodash');
 
 const client = new WebTorrent();
 
+function parsePath(path, parent = '') {
+  const items = path.split('/');
+
+  return items.map((name, index, array) => {
+    const isLeaf = array.indexOf(name) === array.length - 1;
+    const type = isLeaf ? 'file' : 'directory';
+
+    const pathBefore = path.slice(0, path.indexOf(name)).slice(0, -1);
+    const pathToThis = `${parent}/${pathBefore}/${name}`.replace(/\/\//g, '/');
+
+    const token = {
+      name,
+      type,
+      parent: `/${pathBefore}`,
+      path: pathToThis,
+    };
+
+    return token;
+  });
+}
+
+function removeFromArray(array, itemsToRemove) {
+  return array.filter(item => !itemsToRemove.includes(item));
+}
+
 function generateTreeFromPath(path) {
   const [root, ...rest] = path.split('/');
 
@@ -41,39 +66,6 @@ async function getContentList(torrentFile) {
       resolve(fileList);
     });
   });
-}
-
-async function getContentTree(torrentFile) {
-  const contentList = await getContentList(torrentFile);
-
-  return convertFileListToTree(contentList);
-}
-
-// ///////////////
-
-function parsePath(path, parent = '') {
-  const items = path.split('/');
-
-  return items.map((name, index, array) => {
-    const isLeaf = array.indexOf(name) === array.length - 1;
-    const type = isLeaf ? 'file' : 'directory';
-
-    const pathBefore = path.slice(0, path.indexOf(name)).slice(0, -1);
-    const pathToThis = `${parent}/${pathBefore}/${name}`.replace(/\/\//g, '/');
-
-    const token = {
-      name,
-      type,
-      parent: `/${pathBefore}`,
-      path: pathToThis,
-    };
-
-    return token;
-  });
-}
-
-function removeFromArray(array, itemsToRemove) {
-  return array.filter(item => !itemsToRemove.includes(item));
 }
 
 function convertFileListToTree(filelist) {
@@ -117,6 +109,12 @@ function convertFileListToTree(filelist) {
   }
 
   return tree;
+}
+
+async function getContentTree(torrentFile) {
+  const contentList = await getContentList(torrentFile);
+
+  return convertFileListToTree(contentList);
 }
 
 module.exports = {
