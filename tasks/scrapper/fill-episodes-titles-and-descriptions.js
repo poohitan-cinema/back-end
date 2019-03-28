@@ -19,7 +19,7 @@ if (!serialSlugOrId) {
 function fillSerialWithData(serial, data) {
   return Promise.all(
     data.map(async ({ season: seasonNumber, episodes }) => {
-      const [season] = await DB('seasons')
+      const [season] = await DB('Season')
         .where({
           serial_id: serial.id,
           number: seasonNumber,
@@ -31,32 +31,40 @@ function fillSerialWithData(serial, data) {
 
       return Promise.all(
         episodes.map(async ({ number, title, description }) => {
-          const [episode] = await DB('episodes').where({ season_id: season.id, number });
+          const [episode] = await DB('Episode').where({ season_id: season.id, number });
 
           if (!episode) {
             console.log(`Creating episode ${number} in season ${seasonNumber}...`);
 
-            return DB('episodes')
+            return DB('Episode')
               .insert({
                 title,
                 description,
                 number,
                 season_id: season.id,
+              })
+              .catch((error) => {
+                console.log(`Failed to create episode ${number} in season ${seasonNumber}`);
+                console.error(error);
               });
           }
 
           console.log(`Updating episode ${number} in season ${seasonNumber}...`);
 
-          return DB('episodes')
+          return DB('Episode')
             .update({ title, description })
-            .where({ season_id: season.id, number });
+            .where({ season_id: season.id, number })
+            .catch((error) => {
+              console.log(`Failed to update episode ${number} in season ${seasonNumber}`);
+              console.error(error);
+            });
         }),
       );
     }),
   );
 }
 
-DB('serials')
+DB('Serial')
   .where({ id: serialSlugOrId })
   .orWhere({ slug: serialSlugOrId })
   .then(async ([serial]) => {
