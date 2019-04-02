@@ -206,6 +206,21 @@ const router = async (fastify) => {
       throw new Error();
     }
 
+    const [lastView] = await DB('VideoView')
+      .where({ user_id: userId })
+      .orderBy('created_at', 'desc')
+      .limit(1);
+
+    // Don't create another video view if it's the same video as the last view,
+    // just update the end time
+    if (lastView && lastView.videoId === videoId) {
+      await DB('VideoView')
+        .update({ end_time: Math.floor(endTime) })
+        .where({ id: lastView.id });
+
+      return { id: lastView.id };
+    }
+
     const id = uuid.v4();
 
     await DB('VideoView')
