@@ -7,7 +7,7 @@ const DB = require('./db');
 
 const verifyToken = util.promisify(jwt.verify);
 
-async function injectCurrentUser(request) {
+async function injectCurrentUser(request, reply) {
   const token = request.cookies['cinema-token'] || request.query.token;
 
   if (!token) {
@@ -30,6 +30,10 @@ async function injectCurrentUser(request) {
     request.currentUser = user;
     request.token = token;
   } catch (error) {
+    reply
+      .clearCookie('cinema-token')
+      .clearCookie('cinema-user');
+
     throw new Error('Невалідний токен авторизації');
   }
 }

@@ -23,9 +23,7 @@ const config = require('./config');
 
 fastify.register(require('fastify-file-upload'));
 fastify.register(require('fastify-cors'), { origin: config.corsWhiteList, credentials: true });
-fastify.register(require('fastify-cookie'), (error) => {
-  if (error) throw error;
-});
+fastify.register(require('fastify-cookie'));
 
 fastify.addHook('preHandler', async (request) => {
   if (request.headers['content-type'] === 'application/json') {
@@ -34,7 +32,7 @@ fastify.addHook('preHandler', async (request) => {
   request.query = transformColumnNamesCase(request.query, 'snake');
 });
 
-fastify.addHook('preHandler', async request => Auth.injectCurrentUser(request));
+fastify.addHook('preHandler', async (request, reply) => Auth.injectCurrentUser(request, reply));
 
 fastify.register(login, { prefix: '/login' });
 fastify.register(users, { prefix: '/users' });
