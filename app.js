@@ -19,6 +19,7 @@ const updates = require('./routes/updates');
 const videoProcessing = require('./routes/video-processing');
 
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
+const updateUserLastVisitDate = require('./helpers/update-user-last-visit-date');
 const config = require('./config');
 
 fastify.register(require('fastify-file-upload'));
@@ -33,6 +34,7 @@ fastify.addHook('preHandler', async (request) => {
 });
 
 fastify.addHook('preHandler', async (request, reply) => Auth.injectCurrentUser(request, reply));
+fastify.addHook('preHandler', async request => updateUserLastVisitDate(request.currentUser));
 
 fastify.register(login, { prefix: '/login' });
 fastify.register(users, { prefix: '/users' });
