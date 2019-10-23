@@ -67,7 +67,7 @@ const router = async (fastify) => {
 
     await DB('User')
       .update(request.body)
-      .where({ id: request.params });
+      .where({ id });
 
     const [updatedUser] = await DB('User').where({ id });
 
