@@ -18,14 +18,6 @@ const options = {
 const DEFAULT_ROLE = 'user';
 
 const router = async (fastify) => {
-  fastify.addHook('preHandler', Auth.checkAdminRights);
-
-  fastify.get('/', options, async () => {
-    const users = await DB('User');
-
-    return users;
-  });
-
   fastify.get('/:id', async (request, reply) => {
     const [user] = await DB('User').where({ id: request.params.id });
 
@@ -35,13 +27,21 @@ const router = async (fastify) => {
       throw new Error();
     }
 
-    return user;
+    const { password, ...safeUser } = user;
+
+    return safeUser;
   });
 
-  fastify.post('/', options, async (request, reply) => {
+  fastify.get('/', { ...options, preHandler: Auth.checkAdminRights }, async () => {
+    const users = await DB('User');
+
+    return users;
+  });
+
+  fastify.post('/', { ...options, preHandler: Auth.checkAdminRights }, async (request, reply) => {
     const { name, password, role = DEFAULT_ROLE } = request.body;
 
-    if (!(name && password && role)) {
+    if (!(name && password)) {
       reply.code(HTTPStatus.UNPROCESSABLE_ENTITY);
 
       throw new Error('Запит повинен містити ім\'я користувача і його пароль');
@@ -62,7 +62,7 @@ const router = async (fastify) => {
     return createdUser;
   });
 
-  fastify.patch('/:id', options, async (request) => {
+  fastify.patch('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { id } = request.params;
 
     await DB('User')
@@ -74,7 +74,7 @@ const router = async (fastify) => {
     return updatedUser;
   });
 
-  fastify.delete('/:id', async (request) => {
+  fastify.delete('/:id', { ...options, preHandler: Auth.checkAdminRights }, async (request) => {
     const { id } = request.params;
     const [deletedUser] = await DB('User').where({ id });
 

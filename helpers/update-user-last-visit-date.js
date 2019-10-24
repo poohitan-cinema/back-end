@@ -3,10 +3,10 @@ const DB = require('../services/db');
 
 module.exports = async (user) => {
   if (!user) {
-    return;
+    return Promise.resolve();
   }
 
-  DB('User')
+  return DB('User')
     .update({ lastVisitedAt: moment().format('YYYY-MM-DD HH:mm:ss') })
     .where({ id: user.id });
 };
