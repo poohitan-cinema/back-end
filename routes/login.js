@@ -57,17 +57,12 @@ const router = async (server) => {
     }
 
     const token = jwt.sign({ id: user.id }, config.jwtSecret);
-    const { id, name, role } = user;
-    const safeUser = { id, name, role };
+    const { password, ...safeUser } = user;
 
     const expires = moment().add(1, 'weeks').toDate();
 
     reply
       .setCookie('cinema-token', token, {
-        domain: config.cookieDomain,
-        expires,
-      })
-      .setCookie('cinema-user', JSON.stringify(safeUser), {
         domain: config.cookieDomain,
         expires,
       });

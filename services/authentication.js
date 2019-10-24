@@ -19,7 +19,6 @@ async function injectCurrentUser(request, reply) {
 
     const { id } = jwt.decode(token);
     const [user] = await DB('User')
-      .select('id', 'name', 'role')
       .where({ id })
       .limit(1);
 
@@ -31,6 +30,7 @@ async function injectCurrentUser(request, reply) {
     request.token = token;
   } catch (error) {
     reply
+      .code(HttpStatus.UNAUTHORIZED)
       .clearCookie('cinema-token')
       .clearCookie('cinema-user');
 

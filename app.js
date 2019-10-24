@@ -15,10 +15,11 @@ const movies = require('./routes/movies');
 const serials = require('./routes/serials');
 const seasons = require('./routes/seasons');
 const episodes = require('./routes/episodes');
-const updates = require('./routes/updates');
+const lastUploads = require('./routes/last-uploads');
 const videoProcessing = require('./routes/video-processing');
 
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
+const updateUserTimestamp = require('./helpers/update-user-timestamp');
 const config = require('./config');
 
 fastify.register(require('fastify-file-upload'));
@@ -42,12 +43,14 @@ fastify.register(movies, { prefix: '/movies' });
 fastify.register(serials, { prefix: '/serials' });
 fastify.register(seasons, { prefix: '/seasons' });
 fastify.register(episodes, { prefix: '/episodes' });
-fastify.register(updates, { prefix: '/updates' });
+fastify.register(lastUploads, { prefix: '/last-uploads' });
 fastify.register(videoProcessing, { prefix: '/video-processing' });
 
 fastify.get('/', async (request, reply) => {
   reply.send(HTTPStatus.OK);
 });
+
+fastify.addHook('onResponse', async request => updateUserTimestamp(request.currentUser, 'lastVisitedAt'));
 
 fastify.listen(config.port, (error, address) => {
   if (error) {

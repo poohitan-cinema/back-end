@@ -1,6 +1,7 @@
 const moment = require('moment');
 const DB = require('../services/db');
 const Auth = require('../services/authentication');
+const updateUserTimestamp = require('../helpers/update-user-timestamp');
 
 const DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
 
@@ -16,7 +17,7 @@ const options = {
 
 const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
-    const { limit = 100 } = request.query;
+    const { limit = 100, meta = false } = request.query;
 
     const lastUpdatesVideos = await DB('Video')
       .orderBy('updated_at', 'desc')
@@ -50,7 +51,7 @@ const router = async (fastify) => {
       .orderBy('Video.updated_at', 'desc')
       .map(episode => ({ ...episode, type: 'movie' }));
 
-    const allUpdates = lastEpisodes
+    const lastUploads = lastEpisodes
       .concat(lastMovies)
       .sort((left, right) => {
         const leftMoment = moment.utc(left.timestamp, DATE_FORMAT);
@@ -80,7 +81,28 @@ const router = async (fastify) => {
       })
       .slice(0, limit);
 
-    reply.send(allUpdates);
+    const { currentUser } = request;
+    const checkedUpdatesAt = currentUser.checkedUpdatesAt
+      ? moment.utc(currentUser.checkedUpdatesAt)
+      : moment.utc().subtract(1, 'year');
+
+    const fresh = lastUploads
+      .filter(item => moment.utc(item.timestamp).isAfter(checkedUpdatesAt));
+    const rest = lastUploads
+      .filter(item => !fresh.includes(item));
+
+    if (meta) {
+      reply.send({
+        fresh: Boolean(fresh.length),
+        number: fresh.length,
+      });
+
+      return;
+    }
+
+    await updateUserTimestamp(currentUser, 'checkedUpdatesAt');
+
+    reply.send({ fresh, rest });
   });
 };
 
