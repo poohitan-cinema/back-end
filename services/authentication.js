@@ -19,7 +19,6 @@ async function injectCurrentUser(request, reply) {
 
     const { id } = jwt.decode(token);
     const [user] = await DB('User')
-      .select('id', 'name', 'role')
       .where({ id })
       .limit(1);
 
