@@ -19,11 +19,11 @@ const router = async (fastify) => {
   fastify.get('/', { ...options, preHandler: Auth.checkUserRights }, async (request, reply) => {
     const { limit = 100, meta = false } = request.query;
 
-    const lastUpdatesVideos = await DB('Video')
+    const lastVideos = await DB('Video')
       .orderBy('updated_at', 'desc')
       .limit(limit);
 
-    const idsOfLastUpdatedVideos = lastUpdatesVideos.map(video => video.id);
+    const idsOfLastVideos = lastVideos.map(video => video.id);
 
     const lastEpisodes = await DB
       .select(
@@ -36,7 +36,7 @@ const router = async (fastify) => {
         'Video.updated_at as timestamp',
       )
       .from('Episode')
-      .whereIn('Video.id', idsOfLastUpdatedVideos)
+      .whereIn('Video.id', idsOfLastVideos)
       .orderBy('Video.updated_at', 'desc')
       .innerJoin('Video', 'Episode.video_id', 'Video.id')
       .innerJoin('Season', 'Episode.season_id', 'Season.id')
@@ -47,7 +47,7 @@ const router = async (fastify) => {
       .select('Movie.title', 'Movie.slug', 'Video.id', 'Video.updated_at as timestamp')
       .from('Movie')
       .innerJoin('Video', 'Movie.video_id', 'Video.id')
-      .whereIn('Video.id', idsOfLastUpdatedVideos)
+      .whereIn('Video.id', idsOfLastVideos)
       .orderBy('Video.updated_at', 'desc')
       .map(episode => ({ ...episode, type: 'movie' }));
 
