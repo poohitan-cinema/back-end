@@ -211,6 +211,10 @@ const router = async (fastify) => {
       .orderBy('created_at', 'desc')
       .limit(1);
 
+    if (endTime === 0) {
+      return {};
+    }
+
     // Don't create another video view if it's the same video as the last view,
     // just update the end time
     if (lastView && lastView.videoId === videoId) {
