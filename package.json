@@ -22,7 +22,7 @@
     "html-to-text": "^4.0.0",
     "http-status-codes": "^1.3.0",
     "jsonwebtoken": "^8.4.0",
-    "knex": "^0.16.3",
+    "knex": "^0.19.5",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "nookies": "^2.0.1",
