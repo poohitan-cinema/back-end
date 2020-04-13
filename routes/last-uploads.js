@@ -40,19 +40,18 @@ const router = async (fastify) => {
       .orderBy('Video.updated_at', 'desc')
       .innerJoin('Video', 'Episode.video_id', 'Video.id')
       .innerJoin('Season', 'Episode.season_id', 'Season.id')
-      .innerJoin('Serial', 'Season.serial_id', 'Serial.id')
-      .map(episode => ({ ...episode, type: 'episode' }));
+      .innerJoin('Serial', 'Season.serial_id', 'Serial.id');
 
     const lastMovies = await DB
       .select('Movie.title', 'Movie.slug', 'Video.id', 'Video.updated_at as timestamp')
       .from('Movie')
       .innerJoin('Video', 'Movie.video_id', 'Video.id')
       .whereIn('Video.id', idsOfLastVideos)
-      .orderBy('Video.updated_at', 'desc')
-      .map(episode => ({ ...episode, type: 'movie' }));
+      .orderBy('Video.updated_at', 'desc');
 
     const lastUploads = lastEpisodes
-      .concat(lastMovies)
+      .map(episode => ({ ...episode, type: 'episode' }))
+      .concat(lastMovies.map(episode => ({ ...episode, type: 'movie' })))
       .sort((left, right) => {
         const leftMoment = moment.utc(left.timestamp, DATE_FORMAT);
         const rightMoment = moment.utc(right.timestamp, DATE_FORMAT);
