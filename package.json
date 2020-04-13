@@ -7,7 +7,7 @@
     "start": "export NODE_ENV=development && pm2-dev start app.js",
     "lint": "eslint \"**/*.js\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy": "export NODE_ENV=production && node tasks/deploy.js"
+    "deploy": "pm2 deploy production"
   },
   "author": "",
   "license": "ISC",
