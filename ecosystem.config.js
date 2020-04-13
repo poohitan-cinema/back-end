@@ -22,7 +22,7 @@ module.exports = {
       ref: 'origin/master',
       repo: 'git@github.com:poohitan-cinema/back-end.git',
       path: '/home/poohitan/poohitan.com/cinema/back-end',
-      'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env production --update-env',
+      'post-deploy': 'npm install && pm2 reload ecosystem.config.js --env production --update-env',
     },
   },
 };
