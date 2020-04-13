@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const knexfile = require('./knexfile');
 
 const environment = process.env.NODE_ENV;
@@ -28,7 +30,7 @@ const config = {
     db: knexfile.production,
     corsWhiteList: ['http://cinema.poohitan.com', 'https://cinema.poohitan.com'],
 
-    jwtSecret: process.env.POOHITAN_COM_JWT_SECRET,
+    jwtSecret: process.env.JWT_SECRET,
 
     server: {
       host: '46.101.99.203',
