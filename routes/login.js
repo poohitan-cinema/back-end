@@ -20,6 +20,8 @@ const router = async (server) => {
   server.post('/', options, async (request, reply) => {
     const { body } = request;
 
+    console.log('BODY', body);
+
     if (!(body.name && body.password)) {
       reply.code(HTTPStatus.BAD_REQUEST);
 
@@ -39,11 +41,15 @@ const router = async (server) => {
       .whereRaw(`lower(name) = '${body.name.toLowerCase()}'`)
       .limit(1);
 
+    console.log('USER', user);
+
     if (!user) {
       reply.code(HTTPStatus.UNAUTHORIZED);
 
       throw new Error('Неправильне ім\'я або пароль');
     }
+
+    console.log(user.password, body.password, user.password === body.password);
 
     if (user.password !== body.password) {
       const passwordsSimilarity = StringSimilarity.compareTwoStrings(user.password, body.password);
