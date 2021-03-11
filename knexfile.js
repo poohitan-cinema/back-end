@@ -1,4 +1,5 @@
 const path = require('path');
+
 const transformColumnNamesCase = require('./helpers/transform-column-names-case');
 
 function postProcessResponse(result) {

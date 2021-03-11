@@ -1,19 +1,36 @@
 module.exports = {
-  apps: [{
-    name: 'cinema-api',
-    script: 'app.js',
+  apps: [
+    {
+      name: 'cinema-api',
+      script: 'app.js',
 
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '300M',
-    env: {
-      NODE_ENV: 'development',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '300M',
+      env: {
+        NODE_ENV: 'development',
+      },
+      env_production: {
+        NODE_ENV: 'production',
+      },
     },
-    env_production: {
-      NODE_ENV: 'production',
+    {
+      name: 'cinema-db-backuper',
+      script: 'db-backuper.js',
+
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '50M',
+      env: {
+        NODE_ENV: 'development',
+      },
+      env_production: {
+        NODE_ENV: 'production',
+      },
     },
-  }],
+  ],
 
   deploy: {
     production: {
