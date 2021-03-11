@@ -10,8 +10,12 @@ if (!environment) {
 
 const shared = {
   port: 7400,
+
   digitalOcean: {
-    space: 'https://poohitan-cinema.ams3.cdn.digitaloceanspaces.com',
+    spaces: {
+      name: 'poohitan-cinema',
+      endpoint: 'ams3.digitaloceanspaces.com',
+    },
   },
 };
 

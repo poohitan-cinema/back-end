@@ -7,13 +7,15 @@
     "start": "export NODE_ENV=development && pm2-dev start app.js",
     "lint": "eslint \"**/*.js\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy": "export NODE_ENV=production && node tasks/deploy.js"
+    "deploy": "pm2 deploy production"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.861.0",
     "case": "^1.6.1",
     "cheerio": "^1.0.0-rc.2",
+    "cron": "^1.8.2",
     "dotenv": "^8.2.0",
     "fastify": "^2.10.0",
     "fastify-cookie": "^3.2.0",
@@ -29,7 +31,7 @@
     "pino-pretty": "^2.5.0",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
-    "sqlite3": "^4.1.0",
+    "sqlite3": "^4.2.0",
     "string-similarity": "^3.0.0",
     "uuid": "^3.3.2",
     "webtorrent": "^0.107.16",
